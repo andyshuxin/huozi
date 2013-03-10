@@ -1,0 +1,15 @@
+__pycache__
+modulebak
+
+ExtMainText.py
+
+*.pyc
+*.pyo
+
+*.html
+*.htm
+*.txt
+
+test.py
+
+tags
