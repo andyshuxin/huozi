@@ -12,7 +12,8 @@ It includes these tools:
 + A grabber that grabs a URL, Unicode supported.
 
 ## Package Structure
-For a closer look at the structure of the package, see [https://docs.google.com/drawings/d/1d5kYCMnzITXCBh8i5sf5QXsP27WUnKyGHYXqXzy2lL0] (in Chinese)
+For a closer look at the structure of the package, see: [https://docs.google.com/drawings/d/1d5kYCMnzITXCBh8i5sf5QXsP27WUnKyGHYXqXzy2lL0]
+(mostly in Chinese)
 
 ## Author
 My name is Andy Shu Xin. I am a Hong Kong-based journalist and volunteer with a non-profit organization [cochina.org]. I picked up programming since January 2013 and I am more ambitious than my capabilities. So please expect nothing better than chaotic design, horrible mistakes, and spaghetti code style.
