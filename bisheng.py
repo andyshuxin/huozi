@@ -3,7 +3,7 @@
 
 # Bisheng, GUI for AEP module; currently customized for production
 # of 1510 Weekly.
-__VERSION__ = 'Build 0001'
+__VERSION__ = 'Build 0312'
 from aep import __VERSION__ as __AEPVERSION__
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
 __COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
@@ -40,6 +40,10 @@ txt = {
        'graberror':     "Something is wrong grabbing: ",
        'graberrorCap':  "Grabber Error",
        'tglSubhead':    "Toggle sub&headline",
+       'configIssueH':  "Configure the issue",
+       'addArticleH':   "Add a set of articles",
+       'getDocH':       "Produce doc file",
+       'quitH':         "Quit"
        }
 
 #####  UI  #####
@@ -53,29 +57,52 @@ class HuoziMainFrame(wx.Frame):
     def __init__(self, currentIssue, *args, **kwargs):
         super(HuoziMainFrame, self).__init__(*args, **kwargs)
         self.issue = currentIssue   #issue of magazine
-        self.InitUI()
+        self.DrawUI()
 
-    def InitUI(self):
+    def DrawUI(self):
 
-        # Panel, sole and only
+        # Panels
         self.panel = wx.Panel(self, wx.ID_ANY)
+        panelInfoBar = wx.Panel(self.panel, wx.ID_ANY, style=wx.SUNKEN_BORDER)
+        panelInfoBar.SetBackgroundColour(wx.Colour(202, 237, 218))
+        panelInfoBar.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
 
         # Box sizers
         hBox = wx.BoxSizer(wx.HORIZONTAL)
         vBoxLeft = wx.BoxSizer(wx.VERTICAL)
         vBoxRight = wx.BoxSizer(wx.VERTICAL)
-        gridBox = wx.GridSizer(2, 2)
-        hBox.Add(vBoxLeft, proportion=0, flag=wx.EXPAND|wx.ALL, border=5)
-        hBox.Add(vBoxRight, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
-        vBoxLeft.Add(gridBox, proportion=0, flag=wx.EXPAND)
+        hBox.Add(vBoxLeft, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
+        hBox.Add(vBoxRight, proportion=3, flag=wx.EXPAND|wx.ALL, border=5)
         self.panel.SetSizerAndFit(hBox)
+        gridBox = wx.GridSizer(1, 4)   #gridBoxer scales better
+        vBoxLeft.Add(gridBox, proportion=0, flag=wx.EXPAND)
+        vBoxRight.Add(panelInfoBar, 0, flag=wx.EXPAND)
 
         # Toolbar
         self.toolbar = self.CreateToolBar()
-        configIssueTool = self.toolbar.AddLabelTool(wx.ID_SETUP, 'ConfigureIssue', wx.Bitmap('img/configissue.png'))
-        addArticleTool = self.toolbar.AddLabelTool(wx.ID_ADD, 'AddArticle', wx.Bitmap('img/addarticle.png'))
-        getDocTool = self.toolbar.AddLabelTool(wx.ID_ANY, 'Generate MS Word', wx.Bitmap('img/spare.png'))
-        quitTool = self.toolbar.AddLabelTool(wx.ID_EXIT, 'Quit', wx.Bitmap('img/exit.png'))
+        configIssueTool = self.toolbar.AddLabelTool(wx.ID_SETUP,
+                                                    label='ConfigureIssue',
+                                                    bitmap=wx.Bitmap('img/configissue.png'),
+                                                    shortHelp=txt['configIssueH'],
+                                                    )
+
+        addArticleTool = self.toolbar.AddLabelTool(wx.ID_ADD,
+                                                   label='ConfigureIssue',
+                                                   bitmap=wx.Bitmap('img/addarticle.png'),
+                                                   shortHelp=txt['addArticleH'],
+                                                   )
+
+        getDocTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+                                               label='ConfigureIssue',
+                                               bitmap=wx.Bitmap('img/getdoc.png'),
+                                               shortHelp=txt['getDocH'],
+                                               )
+
+        quitTool = self.toolbar.AddLabelTool(wx.ID_EXIT,
+                                             label='ConfigureIssue',
+                                             bitmap=wx.Bitmap('img/quit.png'),
+                                             shortHelp=txt['quitH'],
+                                             )
 
         self.Bind(wx.EVT_TOOL, self.OnConfigIssue, configIssueTool)
         self.Bind(wx.EVT_TOOL, self.OnAddArticles, addArticleTool)
@@ -89,18 +116,23 @@ class HuoziMainFrame(wx.Frame):
 
         # Information bars
         # TODO: better formatting and add direct editability
-        self.infoBar1 = wx.StaticText(self.panel, wx.ID_ANY, '',
+        infoBarBox = wx.BoxSizer(wx.VERTICAL)
+        self.infoBar1 = wx.StaticText(panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
-                                style=wx.ALIGN_LEFT|wx.ALIGN_TOP)
-        self.infoBar2 = wx.StaticText(self.panel, wx.ID_ANY, '',
+                                style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+        self.infoBar2 = wx.StaticText(panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
-                                style=wx.ALIGN_LEFT|wx.ALIGN_TOP)
-        self.infoBar3 = wx.StaticText(self.panel, wx.ID_ANY, '',
+                                style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+        self.infoBar3 = wx.StaticText(panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
-                                style=wx.ALIGN_LEFT|wx.ALIGN_TOP)
-        vBoxRight.Add(self.infoBar1, 0, flag=wx.TOP|wx.EXPAND)
-        vBoxRight.Add(self.infoBar2, 0, flag=wx.TOP|wx.EXPAND)
-        vBoxRight.Add(self.infoBar3, 0, flag=wx.TOP|wx.EXPAND)
+                                style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+        infoBarBox.Add(self.infoBar1, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
+        infoBarBox.Add(self.infoBar2, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
+        infoBarBox.Add(self.infoBar3, 0, flag=wx.TOP|wx.LEFT|wx.BOTTOM|wx.EXPAND, border=5)
+        self.infoBar1.Bind(wx.EVT_LEFT_DOWN, self.OnConfigIssue)
+        self.infoBar2.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
+        self.infoBar3.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
+        panelInfoBar.SetSizerAndFit(infoBarBox)
 
         # Article List
         self.articleList = wx.ListBox(self.panel, wx.ID_ANY, wx.DefaultPosition,
@@ -111,42 +143,73 @@ class HuoziMainFrame(wx.Frame):
         self.Bind(wx.EVT_LISTBOX_DCLICK, self.OnArticleListDclick,
                   self.articleList)
 
-        # Buttons to manipulate articles
-        self.btnUp = wx.Button(self.panel, wx.ID_UP, txt['btnUp'])
-        self.btnDn = wx.Button(self.panel, wx.ID_DOWN, txt['btnDn'])
-        self.btnMdf = wx.Button(self.panel, wx.ID_ANY, txt['btnMdf'])
-        self.btnDel = wx.Button(self.panel, wx.ID_DELETE, txt['btnDel'])
+        # Article list toolbox
+        self.btnUp = wx.BitmapButton(self.panel, wx.ID_UP,
+                                     wx.Bitmap('img/up.png'),
+                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
+
+        self.btnDn = wx.BitmapButton(self.panel, wx.ID_DOWN,
+                                     wx.Bitmap('img/down.png'),
+                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
+
+        self.btnMdf = wx.BitmapButton(self.panel, wx.ID_ANY,
+                                     wx.Bitmap('img/modify.png'),
+                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
+
+        self.btnDel = wx.BitmapButton(self.panel, wx.ID_DELETE,
+                                     wx.Bitmap('img/delete.png'),
+                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
+
         for button in (self.btnUp, self.btnDn, self.btnMdf, self.btnDel):
-            gridBox.Add(button, 0, flag=wx.EXPAND)
+            gridBox.Add(button, flag=wx.EXPAND)
             button.Enable(False)
         self.Bind(wx.EVT_BUTTON, self.OnUp, self.btnUp)
         self.Bind(wx.EVT_BUTTON, self.OnDown, self.btnDn)
-        self.Bind(wx.EVT_BUTTON, self.OnModify, self.btnMdf)
+        self.Bind(wx.EVT_BUTTON, self.OnModifyArticleInfo, self.btnMdf)
         self.Bind(wx.EVT_BUTTON, self.OnDelete, self.btnDel)
 
         # Maintext display and editing 
         self.textBox = wx.TextCtrl(self.panel,
                                    value='',
                                    style=wx.TE_MULTILINE|wx.TE_RICH2)
-        vBoxRight.Add(self.textBox, 1, flag=wx.EXPAND|wx.BOTTOM|wx.TE_BESTWRAP)
+        self.textBox.SetEditable(False)
+        vBoxRight.Add(self.textBox, 6, flag=wx.EXPAND|wx.TOP|wx.TE_BESTWRAP, border=5)
+        self.textBox.SetFont(wx.Font(11, wx.ROMAN, wx.NORMAL, wx.NORMAL))
         self.Layout()
-        self.Bind(wx.EVT_TEXT, self.OnTextBoxChanged, self.textBox)
 
         # Buttons to manipulate the text
-        btnSubhead = wx.Button(self.panel, -1, txt['tglSubhead'])
+        self.btnSubhead = wx.BitmapButton(self.panel,
+                                     wx.ID_ANY,
+                                     wx.Bitmap('img/highlight.png'))
+
+        self.btnEdit = wx.BitmapButton(self.panel,
+                                  wx.ID_ANY,
+                                  wx.Bitmap('img/edit.png'))
+
+        self.btnSave = wx.BitmapButton(self.panel,
+                                  wx.ID_ANY,
+                                  wx.Bitmap('img/save.png'))
+        self.btnSubhead.Enable(False)
+        self.btnEdit.Enable(False)
+        self.btnSave.Enable(False)
+
         hBoxBottom = wx.BoxSizer(wx.HORIZONTAL)
-        hBoxBottom.Add(btnSubhead, 0)
+        hBoxBottom.Add(self.btnEdit, 0)
+        hBoxBottom.Add(self.btnSubhead, 0)
+        hBoxBottom.Add(self.btnSave, 0)
         vBoxRight.Add(hBoxBottom, 0)
-        self.Bind(wx.EVT_BUTTON, self.OnToggleSubhead, btnSubhead)
+        self.Bind(wx.EVT_BUTTON, self.OnToggleSubhead, self.btnSubhead)
+        self.Bind(wx.EVT_BUTTON, self.OnEditText, self.btnEdit)
+        self.Bind(wx.EVT_BUTTON, self.OnSaveEdit, self.btnSave)
 
         if DEBUG:
-            btnDev = wx.Button(self.panel, -1, '[DEV]Print issue to CLI')
+            btnDev = wx.Button(self.panel, -1, '[DEV]')
             hBoxBottom.Add(btnDev, 0)
             self.Bind(wx.EVT_BUTTON, self.printIssue, btnDev)
 
         #Main window
         self.SetSize((800, 600))
-        self.basicTitle = u'活字 ' + __VERSION__ + \
+        self.basicTitle = u'畢昇 ' + __VERSION__ + \
                           ' (on AEP ' + __AEPVERSION__ + ')'
         self.SetTitle(self.basicTitle)
         self.Centre()
@@ -230,6 +293,15 @@ class HuoziMainFrame(wx.Frame):
             self.articleList.Insert(article.title, pos)
             pos += 1
 
+        count = self.articleList.GetCount()
+        pos = self.articleList.GetSelection()
+        if (count >= 2) and (pos != -1):
+            if pos != 0:
+                self.btnUp.Enable(True)
+            if pos != count - 1:
+                self.btnDn.Enable(True)
+
+
     def OnCreateDoc(self, e):
         createDoc(self.issue)
 
@@ -277,22 +349,25 @@ class HuoziMainFrame(wx.Frame):
         self.updateInfoBar(itemIndex+1)
 
 
-    def OnModify(self, e):
+    def OnModifyArticleInfo(self, e):
         itemIndex = self.articleList.GetSelection()
+        if itemIndex == -1:
+            return
         selectedTitle = self.articleList.GetString(itemIndex)   #TODO Modulize this
         for article in self.issue.articleList:
             if article.title == selectedTitle:
                 chosenArticle = article
                 break
-        chosenArticle.title = self.askInfo(txt['MdfTitleQ'], txt['MdfTitleT'],
-                                           chosenArticle.title,
-                                           False, True)
-        chosenArticle.author = self.askInfo(txt['MdfAuthorQ'], txt['MdfAuthorT'],
-                                            chosenArticle.author,
-                                            False, True)
-        self.articleList.Delete(itemIndex)
-        self.articleList.Insert(chosenArticle.title, itemIndex)
-        self.articleList.Select(itemIndex)
+        title = self.askInfo(txt['MdfTitleQ'], txt['MdfTitleT'],
+                             chosenArticle.title,
+                             False, True)
+        author = self.askInfo(txt['MdfAuthorQ'], txt['MdfAuthorT'],
+                              chosenArticle.author,
+                              False, True)
+        chosenArticle.title = title
+        chosenArticle.author = author
+
+        self.articleList.SetString(itemIndex, chosenArticle.title)
         self.updateInfoBar(itemIndex)
 
     def OnDelete(self, e):
@@ -307,34 +382,57 @@ class HuoziMainFrame(wx.Frame):
                 break
         self.articleList.Delete(itemIndex)
         self.issue.deleteArticle(chosenArticle)
-        for button in (self.btnUp, self.btnDn, self.btnMdf, self.btnDel):
+        for button in (self.btnUp, self.btnDn, self.btnMdf, self.btnDel,
+                       self.btnSubhead, self.btnEdit, self.btnSave):
             button.Enable(False)
         self.infoBar2.SetLabel('')
         self.infoBar3.SetLabel('')
         self.textBox.SetValue('')
 
+    def OnEditText(self, e):
+        selectedTitle = self.articleList.GetStringSelection()
+        for art in self.issue.articleList:
+            if art.title == selectedTitle:
+                article = art
+                break
+        self.subPre = article.subheadLines
+        self.textPre = self.textBox.GetValue()
+
+        self.textBox.SetEditable(True)
+        self.btnSubhead.Enable(True)
+        self.btnEdit.Enable(False)
+        self.btnSave.Enable(True)
+        pass
+
+    def OnSaveEdit(self, e):
+        selectedTitle = self.articleList.GetStringSelection()
+        for art in self.issue.articleList:
+            if art.title == selectedTitle:
+                article = art
+                break
+        article.text = self.textBox.GetValue()
+        self.ProcessChange()
+        self.textBox.SetEditable(False)
+        self.btnSubhead.Enable(False)
+        self.btnEdit.Enable(True)
+        self.btnSave.Enable(False)
+        pass
+
     def OnArticleListClick(self, e):
         self.btnMdf.Enable(True)
         self.btnDel.Enable(True)
-        self.btnUp.Enable(True)
-        self.btnDn.Enable(True)
-        if e.GetSelection() == 0:
-            self.btnUp.Enable(False)
-        if e.GetSelection() == self.articleList.GetCount() - 1:
-            self.btnDn.Enable(False)
+        self.btnUp.Enable(False)
+        self.btnDn.Enable(False)
+        self.btnEdit.Enable(True)
+        if e.GetSelection() >= 1:
+            self.btnUp.Enable(True)
+        if e.GetSelection() < self.articleList.GetCount() - 1:
+            self.btnDn.Enable(True)
         self.updateInfoBar(e.GetSelection())
         self.updateTextBox(e.GetSelection())
 
     def OnArticleListDclick(self, e):
-        self.OnModify(e)
-
-    def OnTextBoxChanged(self, e):
-        if self.articleList.GetSelection() != -1:   #TODO: modulize
-            selectedTitle = self.articleList.GetStringSelection()
-            for article in self.issue.articleList:
-                if article.title == selectedTitle:
-                    article.text = self.textBox.GetValue()
-                    break
+        self.OnModifyArticleInfo(e)
 
     def OnToggleSubhead(self, e):
 
@@ -370,7 +468,7 @@ class HuoziMainFrame(wx.Frame):
                 rightMargin = fulltext.find('\n', pos)
             except ValueError:
                 rightMargin = self.textBox.GetLastPosition()
-            self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr("black", "white"))
+            self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr("black", "white",))
 
             #Backend action: remove subhead info 
             article.subheadLines.remove(lineNo)
@@ -387,7 +485,7 @@ class HuoziMainFrame(wx.Frame):
                 rightMargin = fulltext.find('\n', pos)
             except ValueError:
                 rightMargin = self.textBox.GetLastPosition()
-            self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr("black", "yellow"))
+            self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
             #Backend action: add subhead info 
             article.subheadLines.append(lineNo)
 
@@ -444,6 +542,11 @@ class HuoziMainFrame(wx.Frame):
                 rightMargin = text.find('\n', leftMargin+1)
             self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
 
+    def ProcessChange(self):
+        """
+        Update subheadline information after main text is changed by user.
+        """
+        pass
 
     def askInfo(self, prompt, dialogTitle, defaultVal='', multiline=False, noCancel=False):
 
