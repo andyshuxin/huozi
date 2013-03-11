@@ -73,14 +73,14 @@ txt = {
 
 #####  UI  #####
 
-class HuoziMainFrame(wx.Frame):
+class MainFrame(wx.Frame):
 
     """
-    Main interactive window of Huozi
+    Main interactive window
     """
 
     def __init__(self, currentIssue, *args, **kwargs):
-        super(HuoziMainFrame, self).__init__(*args, **kwargs)
+        super(MainFrame, self).__init__(*args, **kwargs)
         self.issue = currentIssue   #issue of magazine
         self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
         self.DrawUI()
@@ -379,21 +379,17 @@ class HuoziMainFrame(wx.Frame):
         itemIndex = self.articleList.GetSelection()
         if itemIndex == -1:
             return
-        selectedTitle = self.articleList.GetString(itemIndex)   #TODO Modulize this
-        for article in self.issue.articleList:
-            if article.title == selectedTitle:
-                chosenArticle = article
-                break
+        selectedArticle = self.getSelectedArticle()
         title = self.askInfo(txt['MdfTitleQ'], txt['MdfTitleT'],
-                             chosenArticle.title,
+                             selectedArticle.title,
                              False, True)
         author = self.askInfo(txt['MdfAuthorQ'], txt['MdfAuthorT'],
-                              chosenArticle.author,
+                              selectedArticle.author,
                               False, True)
-        chosenArticle.title = title
-        chosenArticle.author = author
+        selectedArticle.title = title
+        selectedArticle.author = author
 
-        self.articleList.SetString(itemIndex, chosenArticle.title)
+        self.articleList.SetString(itemIndex, selectedArticle.title)
         self.updateInfoBar(itemIndex)
 
     def OnDelete(self, e):
@@ -402,12 +398,9 @@ class HuoziMainFrame(wx.Frame):
         dlgYesNo = wx.MessageDialog(None, txt['DelArticle']+selectedTitle+" ?", style=wx.YES|wx.NO)
         if dlgYesNo.ShowModal() != wx.ID_YES:
             return
-        for article in self.issue.articleList:
-            if article.title == selectedTitle:
-                chosenArticle = article
-                break
+        selectedArticle = self.getSelectedArticle()
         self.articleList.Delete(itemIndex)
-        self.issue.deleteArticle(chosenArticle)
+        self.issue.deleteArticle(selectedArticle)
         for button in (self.btnUp, self.btnDn, self.btnMdf, self.btnDel,
                        self.btnSubhead, self.btnEdit, self.btnSave):
             button.Enable(False)
@@ -447,13 +440,13 @@ class HuoziMainFrame(wx.Frame):
     def OnArticleListClick(self, e):
         self.btnMdf.Enable(True)
         self.btnDel.Enable(True)
-        self.btnUp.Enable(False)
-        self.btnDn.Enable(False)
+        self.btnUp.Enable(True)
+        self.btnDn.Enable(True)
         self.btnEdit.Enable(True)
-        if e.GetSelection() >= 1:
-            self.btnUp.Enable(True)
-        if e.GetSelection() < self.articleList.GetCount() - 1:
-            self.btnDn.Enable(True)
+        if e.GetSelection() == 0:
+            self.btnUp.Enable(False)
+        if e.GetSelection() == self.articleList.GetCount() - 1:
+            self.btnDn.Enable(False)
         self.updateInfoBar(e.GetSelection())
         self.updateTextBox(e.GetSelection())
 
@@ -475,12 +468,8 @@ class HuoziMainFrame(wx.Frame):
 
         #Get selected article
         lineNo = len(self.textBox.GetRange(0, self.textBox.GetInsertionPoint()).split("\n"))
-        if self.articleList.GetSelection() != -1:   #TODO: modulize
-            selectedTitle = self.articleList.GetStringSelection()
-            for art in self.issue.articleList:
-                if art.title == selectedTitle:
-                    article = art
-                    break
+        if self.articleList.GetSelection() != -1:
+            article = self.getSelectedArticle()
 
         if lineNo in article.subheadLines:
             #UI action: dehighlight the line
@@ -527,12 +516,9 @@ class HuoziMainFrame(wx.Frame):
         if index == -1:
             return
         selectedTitle = self.articleList.GetString(index)
-        for article in self.issue.articleList:
-            if article.title == selectedTitle:
-                chosenArticle = article
-                break
-        title = chosenArticle.title
-        author = chosenArticle.author
+        selectedArticle = self.getSelectedArticle()
+        title = selectedArticle.title
+        author = selectedArticle.author
         self.infoBar2.SetLabel('Article title: ' + title)
         self.infoBar3.SetLabel('Author: ' + author)
 
@@ -549,12 +535,9 @@ class HuoziMainFrame(wx.Frame):
         self.textBox.SetValue(text)
 
         selectedTitle = self.articleList.GetString(index)
-        for article in self.issue.articleList:
-            if article.title == selectedTitle:
-                chosenArticle = article
-                break
+        selectedArticle = self.getSelectedArticle()
 
-        for subhead in chosenArticle.subheadLines:
+        for subhead in selectedArticle.subheadLines:
             text = self.textBox.GetValue()
             if subhead == 1:
                 leftMargin = 0
@@ -597,7 +580,14 @@ class HuoziMainFrame(wx.Frame):
         infoDialog.Destroy()
         return res
 
-    def printIssue(self, event):
+    def getSelectedArticle(self):
+        selectedTitle = self.articleList.GetStringSelection()
+        for article in self.issue.articleList:
+            if article.title == selectedTitle:
+                return article
+        return None
+
+    def printIssue(self, e):
         print self.issue.issueNum
         print self.issue.grandTitle
         print self.issue.ediRemark
@@ -610,7 +600,7 @@ class HuoziMainFrame(wx.Frame):
 def main():
     currentIssue = Issue()
     app = wx.App()
-    HuoziMainFrame(currentIssue, None)
+    MainFrame(currentIssue, None)
     app.MainLoop()
 
 if __name__ == '__main__':
