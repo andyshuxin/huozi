@@ -5,6 +5,8 @@
 #unnecessary characters.
 #Currenly, the modules are customized for production of 1510 Weekly.
 
+#Copyright (C) 2013 Shu Xin
+
 __VERSION__ = 'Build 0001'
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
 __COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."

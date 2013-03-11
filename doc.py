@@ -1,6 +1,8 @@
 #!python
 #coding=utf-8
 
+#Copyright (C) 2013 Shu Xin
+
 from urllib import urlopen
 from aep import Article, Issue
 from aep import grab, parseHtml, cleanText

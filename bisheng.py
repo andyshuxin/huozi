@@ -1,8 +1,33 @@
 #!/usr/bin/env python
 #coding=utf-8
 
-# Bisheng, GUI for AEP module; currently customized for production
-# of 1510 Weekly.
+#Copyright (C) 2013 Shu Xin
+
+#Bisheng, GUI for AEP module; currently customized for production
+#of 1510 Weekly.
+
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#==== Works by others ====
+#ExtMainText.py:
+#Copyright (c) 2009, Elias Soong, all rights reserved.
+#In-app icons:
+#taken from Default Icon. Credit to interactivemania
+#(http://www.interactivemania.com).
+#Applicaion icon:
+#taken from WPZOOM(http://www.wpzoom.com), designed by David Ferreira.
+
 __VERSION__ = 'Build 0312'
 from aep import __VERSION__ as __AEPVERSION__
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
@@ -57,6 +82,7 @@ class HuoziMainFrame(wx.Frame):
     def __init__(self, currentIssue, *args, **kwargs):
         super(HuoziMainFrame, self).__init__(*args, **kwargs)
         self.issue = currentIssue   #issue of magazine
+        self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
         self.DrawUI()
 
     def DrawUI(self):
