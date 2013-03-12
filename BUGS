@@ -1,1 +1,3 @@
 Cant' fetch www.baidu.com, will be inresponsive.
+When text with highlighted subheads are changed, the subhead information
+    is not automatically updated, and wrong lines would be highlighted.
