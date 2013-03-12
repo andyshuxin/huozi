@@ -73,6 +73,8 @@ txt = {
        'getDocH':       "Produce doc file",
        'quitH':         "Quit",
        'AboutH':        "About",
+       'issueNo':       "Issue no.",
+       'articleNo':     "Total number of articles: ",
        }
 
 #####  UI  #####
@@ -254,8 +256,8 @@ class MainFrame(wx.Frame):
 
         #Main window
         self.SetSize((800, 600))
-        self.basicTitle = u'畢昇 ' + __VERSION__ + \
-                          ' (on AEP ' + __AEPVERSION__ + ')'
+        self.basicTitle = (u'畢昇 ' + __VERSION__ + 
+                          ' (on AEP ' + __AEPVERSION__ + ')')
         self.SetTitle(self.basicTitle)
         self.Centre()
         self.Show(True)
@@ -295,8 +297,8 @@ class MainFrame(wx.Frame):
         self.toolbar.EnableTool(wx.ID_ADD, True)
 
         self.updateInfoBar(-1)
-        self.SetTitle(self.basicTitle + ': ' + \
-                      'Issue ' + self.issue.issueNum + \
+        self.SetTitle(self.basicTitle + ': ' +
+                      'Issue ' + self.issue.issueNum +
                       self.issue.grandTitle)
 
     def OnAddArticles(self, e):
@@ -548,11 +550,14 @@ class MainFrame(wx.Frame):
 
     def updateInfoBar(self, index):
 
-        if self.issue.articleList == []:
-            return
+        #if self.issue.articleList == []:
+            #return
 
-        issueInfo = 'Issue no.'+str(self.issue.issueNum)+' '+self.issue.grandTitle+\
-                  ' Total number of articles:'+str(len(self.issue.articleList))
+        issueInfo = (
+                    txt['issueNo'] + str(self.issue.issueNum) + ' ' +
+                    self.issue.grandTitle +
+                    txt['articleNo'] + str(len(self.issue.articleList))
+                    )
         self.infoBar1.SetLabel(issueInfo)
 
         if index == -1:

@@ -62,11 +62,11 @@ class Article(object):
         self.url = url
 
     def __str__(self):
-        return '====Article====\n' + \
-               'Title is '+self.title+'\n'+ \
-               'Author is '+self.author+'\n'+ \
-               '***Main text starts ***\n' + self.text + '***Main text ends ***\n' + \
-               'Subhead line numbers: ' + str(self.subheadLines)
+        return ('====Article====\n' +
+               'Title is '+self.title+'\n'+
+               'Author is '+self.author+'\n'+
+               '***Main text starts ***\n' + self.text + '***Main text ends ***\n' +
+               'Subhead line numbers: ' + str(self.subheadLines))
 
 class Issue(object):
 
@@ -84,9 +84,9 @@ class Issue(object):
         self.articleList.remove(article)
 
     def __str__(self):
-        res = 'Issue no.'+unicode(self.issueNum)+' '+self.grandTitle+'\n'+\
-               'total article number:'+unicode(len(self.articleList))+'\n'+\
-               'Editor says:'+self.ediRemark+'\n'
+        res = ('Issue no.'+unicode(self.issueNum)+' '+self.grandTitle+'\n'+
+               'total article number:'+unicode(len(self.articleList))+'\n'+
+               'Editor says:'+self.ediRemark+'\n')
         for article in self.articleList:
             res += unicode(article) + '\n'
         return res
@@ -119,11 +119,10 @@ def cleanText(input, patternBook=None):
         text = text[1:]
     while text[0:2] == '\r\n':
         text = text[2:]
-    #TODO Test following code
-    #while text[-1] == ' ' or text[-1] == '\n':
-        #text = text[:-1]
-    #while text[-2:] == '\r\n':
-        #text = text[:-2]
+    while text[-1] == ' ' or text[-1] == '\n':
+        text = text[:-1]
+    while text[-2:] == '\r\n':
+        text = text[:-2]
 
     ## Delete unnecessary spaces
     i = 1
@@ -223,9 +222,9 @@ def grab(url):
 
     def _isLegit(char):
         """ Return true if char can be part of the name of a charset """
-        if char in string.ascii_letters or \
-           char in string.digits or \
-           char == '-':
+        if (char in string.ascii_letters or
+           char in string.digits or
+           char == '-'):
            return True
         else:
            return False
