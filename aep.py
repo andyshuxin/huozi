@@ -46,17 +46,20 @@ CLEANERBOOK = (
 
 CLEANER_EXCEPTION_BOOK = {}
 
+PUNCTUATIONS = (',', '.', ':', ')', u'，', u'。', u'：', u'）')
+
 #####  Data strcture  #####
 
 class Article(object):
 
     def __init__(self, title='', author='', text='',
-                 subheadLines=[], category = '', portraitPath=''):
+                 subheadLines=[], category = '', portraitPath='', url=''):
         self.title = title
         self.author = author
         self.text = text
         self.subheadLines = subheadLines
         self.portraitPath = portraitPath
+        self.url = url
 
     def __str__(self):
         return '====Article====\n' + \
@@ -88,6 +91,10 @@ class Issue(object):
             res += unicode(article) + '\n'
         return res
 
+    def __iter__(self):
+        for article in self.articleList:
+            yield article
+
     #def addCategory(self, word, articlesContained):
         #newCategory = Category(word, articlesContained)
         #self.categoryList.append(newCategory)
@@ -107,58 +114,84 @@ def cleanText(input, patternBook=None):
         while string.find(text, key) != -1:
             text = string.replace(text, key, patternPair[1])
 
-    ## Kill spaces and blank lines at BOF
+    ## Kill spaces and blank lines at BOF and EOF
     while text[0] == ' ' or text[0] == '\n':
         text = text[1:]
     while text[0:2] == '\r\n':
         text = text[2:]
+    #TODO Test following code
+    #while text[-1] == ' ' or text[-1] == '\n':
+        #text = text[:-1]
+    #while text[-2:] == '\r\n':
+        #text = text[:-2]
 
-    ## Dealing with spaces
+    ## Delete unnecessary spaces
     i = 1
     while i < len(text) - 1:
         if text[i] == ' ':
-
-            # Delete spaces around Chinese characters
+            # Delete spaces next to Chinese characters
             if _isChinese(text[i-1]) or _isChinese(text[i+1]):
                 text = text[:i] + text[i+1:]
-
             # Combine multiple consecutive spaces
             elif (text[i-1] == ' ') or (text[i+1] == ' '):
                 text = text[:i] + text[i+1:]
-
         i += 1
-
     return text
 
 #####  Parser Module  #####
 
-def _guessTitle(htmlText):
+
+def _guessMeta(htmlText, plainText):
+
+    ## Guess title
+    # Extract what's between <title> and </title>
     titleStart = string.find(htmlText, '<title')
     titleEnd = string.find(htmlText, '</title>')
     leftTagEnd = string.find(htmlText, '>', titleStart)
     if leftTagEnd+1 <= titleEnd:
-        title = htmlText[leftTagEnd+1:titleEnd]
+        title = cleanText(htmlText[leftTagEnd+1:titleEnd])
     else:
+        # Unusual tag structure
         title = '*****'
-    return title
 
-def _guessAuthor(htmlText):
-    #TODO
-    return ''
+    ## Guess author
+    if ':' in title or u'：' in title:
+        try:
+            pos = title.index(':')
+        except ValueError:
+            pos = title.index(u'：')
+        if pos <= 3:
+            author = title[:pos]
+            title = title[pos+1:]
+    else:
+        author = ''
 
-def _guessSubhead(htmlText, mainText):
-    #TODO: (a) use <h3> stuff (b) use length
+    ## Guess subheads
     subs = []
-    lines = cleanText(mainText).split('\n')
+    lines = cleanText(plainText).split('\n')
 
-    for lineNo in range(1, len(lines) - 1):
+    lineNo = 2
+    while lineNo < len(lines) - 2:
+
+        # Include phase
         L = len(lines[lineNo])
-        Lup = len(lines[lineNo-1])
-        Ldown = len(lines[lineNo+1])
-
-        if (L < SUBTHREDSOLD * (Lup + Ldown) / 2) and (L < MAXSUBLEN):
+        Lup1 = len(lines[lineNo-1])
+        Lup2 = len(lines[lineNo-2])
+        Ldown1 = len(lines[lineNo+1])
+        Ldown2 = len(lines[lineNo+2])
+        avgL = (Lup1 + Lup2 + Ldown1 + Ldown2) / 4
+        if (L < SUBTHREDSOLD * avgL):
             subs.append(lineNo+1)
-    return subs
+        lineNo += 2  #Subheads should be scatterred.
+
+        # Exclude phase
+        for sub in subs:
+            endian = lines[sub - 1][-1]
+            length = len(lines[sub - 1])
+            if (endian in PUNCTUATIONS) or length > MAXSUBLEN:
+                subs.remove(sub)
+
+    return (title, author, subs)
 
 def parseHtml(htmlText):
 
@@ -170,16 +203,17 @@ def parseHtml(htmlText):
     """
 
     mainText = extMainText(htmlText)
-    ratio = 0.5 - 0.1
+    ratio = 0.5
     while len(get_text(mainText)) < 10:
         mainText = extMainText(htmlText, ratio, True)
         ratio -= 0.1
     mainText = get_text(mainText)
 
+    meta = _guessMeta(htmlText, mainText)
     meta = {
-            'title': _guessTitle(htmlText),
-            'author': _guessAuthor(htmlText),
-            'sub': _guessSubhead(htmlText, mainText),
+            'title':  meta[0],
+            'author': meta[1],
+            'sub':    meta[2],
             }
 
     return (mainText, meta)
@@ -188,11 +222,7 @@ def parseHtml(htmlText):
 def grab(url):
 
     def _isLegit(char):
-
-        """
-        Return true if char can be part of the name of a charset
-        """
-
+        """ Return true if char can be part of the name of a charset """
         if char in string.ascii_letters or \
            char in string.digits or \
            char == '-':
@@ -207,8 +237,6 @@ def grab(url):
             res = 'http://www.' + url
         return res
 
-    #End internal func
-
     url = _urlClean(url)
 
     hdr = {'User-Agent': 'Mozilla/5.0'}
@@ -218,7 +246,7 @@ def grab(url):
     except:
         pass #TODO
 
-    #Handle encoding
+    # Get encoding info and decode
     csPos = html.index('charset=') + len('charset=')
     while not _isLegit(html[csPos]):
         csPos += 1
@@ -226,7 +254,8 @@ def grab(url):
     while _isLegit(html[csPos + L]):
         L += 1
     charset = html[csPos:csPos+L]
-    if charset == 'gb2312':       #just to be safe
+    # Be extra-careful with the gb2312 users
+    if charset == 'gb2312':
         charset = 'gbk'
     try:
         html = html.decode(charset, 'ignore')
@@ -237,6 +266,7 @@ def grab(url):
         return html
 
 #####  File operation module  ####
+
 def readfile(filename):
     f = codecs.open(filename, 'r', 'utf-8')
     text = f.read()
@@ -249,11 +279,13 @@ def writefile(filename, content):
     f.close()
 
 def readArgv(n):
+
     '''
     n: number arguments expected to be returned
     Return: a tuple of n length consisting of arguments,
     if argument is inadequate, use None to fill in.
     '''
+
     res = []
     for i in range(1, len(sys.argv)):
         res.append(sys.argv[i])
