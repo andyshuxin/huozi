@@ -234,35 +234,36 @@ def grab(url):
         #TODO: transform renren.com -> www.renren.com
         res = url
         if url[:4] != 'http':
-            res = 'http://www.' + url
+            res = 'http://' + url
         return res
 
     url = _urlClean(url)
-
     hdr = {'User-Agent': 'Mozilla/5.0'}
     req = urllib2.Request(url, headers=hdr)
+    req = urllib2.Request(url)
     try:
         html = urllib2.urlopen(req).read()
     except:
-        pass #TODO
+        html = ''
 
-    # Get encoding info and decode
-    csPos = html.index('charset=') + len('charset=')
-    while not _isLegit(html[csPos]):
-        csPos += 1
-    L = 1
-    while _isLegit(html[csPos + L]):
-        L += 1
-    charset = html[csPos:csPos+L]
-    # Be extra-careful with the gb2312 users
-    if charset == 'gb2312':
-        charset = 'gbk'
+    # Get encoding info, and decode accordingly.
+    try:
+        csPos = html.index('charset=') + len('charset=')
+        while not _isLegit(html[csPos]):
+            csPos += 1
+        L = 1
+        while _isLegit(html[csPos + L]):
+            L += 1
+        charset = html[csPos:csPos+L]
+    except ValueError:
+        charset = 'utf-8'
+    charset = 'gbk' if charset == 'gb2312' else charset
     try:
         html = html.decode(charset, 'ignore')
-        return html
     except UnicodeDecodeError, err:
         #TODO
         print err
+    finally:
         return html
 
 #####  File operation module  ####
