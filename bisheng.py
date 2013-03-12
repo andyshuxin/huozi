@@ -3,8 +3,7 @@
 
 #Copyright (C) 2013 Shu Xin
 
-#Bisheng, GUI for AEP module; currently customized for production
-#of 1510 Weekly.
+#Bisheng, simplistic DTP
 
 #This program is free software: you can redistribute it and/or modify
 #it under the terms of the GNU General Public License as published by
@@ -21,12 +20,14 @@
 
 #==== Works by others ====
 #ExtMainText.py:
-#Copyright (c) 2009, Elias Soong, all rights reserved.
+#  Copyright (c) 2009, Elias Soong, all rights reserved.
 #In-app icons:
-#taken from Default Icon. Credit to interactivemania
-#(http://www.interactivemania.com).
-#Applicaion icon:
-#taken from WPZOOM(http://www.wpzoom.com), designed by David Ferreira.
+#  taken from Default Icon. Credit to interactivemania
+#  (http://www.interactivemania.com).
+#Applicaion icon: 
+#  Downloaded from http://thenounproject.com/noun/keyboard/#icon-No3041
+#  Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
+#  from The Noun Project
 
 __VERSION__ = 'Build 0312'
 from aep import __VERSION__ as __AEPVERSION__
