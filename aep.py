@@ -68,6 +68,14 @@ class Article(object):
                '***Main text starts ***\n' + self.text + '***Main text ends ***\n' +
                'Subhead line numbers: ' + str(self.subheadLines))
 
+    def addSub(self, sub):
+        if sub not in self.subheadLines:
+            self.subheadLines.append(sub)
+
+    def delSub(self, sub):
+        if sub in self.subheadLines:
+            self.subheadLines.remove(sub)
+
 class Issue(object):
 
     def __init__(self, issueNum='', grandTitle='', ediRemark=''):

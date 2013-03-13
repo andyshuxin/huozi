@@ -216,6 +216,7 @@ class MainFrame(wx.Frame):
         vBoxRight.Add(self.textBox, 6, flag=wx.EXPAND|wx.TOP|wx.TE_BESTWRAP, border=5)
         self.textBox.SetFont(wx.Font(11, wx.ROMAN, wx.NORMAL, wx.NORMAL))
         self.Layout()
+        self.Bind(wx.EVT_TEXT, self.OnTextChange, self.textBox)
 
         # Buttons to manipulate the text
         self.btnSubhead = wx.BitmapButton(self.panel,
@@ -445,35 +446,39 @@ class MainFrame(wx.Frame):
         self.textBox.SetValue('')
 
     def OnEditText(self, e):
-        selectedTitle = self.articleList.GetStringSelection()
-        for art in self.issue.articleList:
-            if art.title == selectedTitle:
-                article = art
-                break
-        self.subPre = article.subheadLines
+        article = self.getSelectedArticle()
         self.textPre = self.textBox.GetValue()
+        self.subPre = article.subheadLines
 
         self.textBox.SetEditable(True)
+
         self.btnSubhead.Enable(True)
         self.btnComment.Enable(True)
         self.btnEdit.Enable(False)
         self.btnSave.Enable(True)
-        pass
 
     def OnSaveEdit(self, e):
-        selectedTitle = self.articleList.GetStringSelection()
-        for art in self.issue.articleList:
-            if art.title == selectedTitle:
-                article = art
-                break
-        article.text = self.textBox.GetValue()
+        article = self.getSelectedArticle()
+        text = self.textBox.GetValue()
+        text = cleanText(text)
+        article.text = text
+        self.textBox.SetValue(text)
+
         self.ProcessChange()
+
         self.textBox.SetEditable(False)
         self.btnSubhead.Enable(False)
         self.btnComment.Enable(False)
         self.btnEdit.Enable(True)
         self.btnSave.Enable(False)
         pass
+
+    def OnTextChange(self, e):
+        textLinesPre = self.textPre.split('\n')
+        textNow = cleanText(self.textBox.GetValue())
+        textLinesNow = text.split('\n')
+        for sub in self.subPre:
+            subheadPre = self.
 
     def OnArticleListClick(self, e):
         self.btnMdf.Enable(True)
@@ -526,7 +531,8 @@ class MainFrame(wx.Frame):
             #Backend action: remove subhead info 
             article.subheadLines.remove(lineNo)
 
-        else: #if lineNo not in article.sbuheadLines
+        #if lineNo not in article.sbuheadLines, add info
+        else:
             #UI action: highlight the line
             pos = self.textBox.GetInsertionPoint()
             fulltext = self.textBox.GetRange(0, self.textBox.GetLastPosition())
@@ -601,8 +607,9 @@ class MainFrame(wx.Frame):
             self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
 
     def ProcessChange(self):
+
         """
-        Update subheadline information after main text is changed by user.
+        Update article.subheadLines after main text is changed by user.
         """
         pass
 
