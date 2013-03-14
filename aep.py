@@ -156,7 +156,7 @@ def _markerPos(html, markers):
             return (marker, html.find(marker))
     return None
 
-def _guessSubFromHtml(html, url):
+def _guessSubFromHtml(html):
     return None
     soup = BeautifulSoup(html)
     H1 = [tag.string for tag in soup.findAll('h1')]
@@ -217,7 +217,6 @@ def _guessMeta(htmlText, plainText):
         else:
             author = ''
     elif _markerPos(htmlText, AUTHORMARKERS) != None:
-        print 'c'
         marker, pos = _markerPos(htmlText, AUTHORMARKERS)
         pos += len(marker)
         L = 0

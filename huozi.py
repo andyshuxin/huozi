@@ -113,29 +113,51 @@ class MainFrame(wx.Frame):
         hBox.Add(vBoxLeft, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
         hBox.Add(vBoxRight, proportion=3, flag=wx.EXPAND|wx.ALL, border=5)
         self.panel.SetSizerAndFit(hBox)
-        gridBox = wx.GridSizer(1, 4)   #gridBoxer scales better
+        gridBox = wx.GridSizer(1, 5)   #gridBoxer scales better
         vBoxLeft.Add(gridBox, proportion=0, flag=wx.EXPAND)
         vBoxRight.Add(panelInfoBar, 0, flag=wx.EXPAND)
 
         # Main toolbar
         self.toolbar = self.CreateToolBar()
+        NewIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+                                                 label='NewIssue',
+                                                 bitmap=wx.Bitmap('img/newissue.png'),
+                                                 shortHelp='',
+                                                 )
+
+        OpenIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+                                                  label='OpenIssue',
+                                                  bitmap=wx.Bitmap('img/openissue.png'),
+                                                  shortHelp='',
+                                                  )
+
+        SaveIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+                                                  label='SaveIssue',
+                                                  bitmap=wx.Bitmap('img/saveissue.png'),
+                                                  shortHelp='',
+                                                  )
+
+        self.toolbar.AddSeparator()
+
         configIssueTool = self.toolbar.AddLabelTool(wx.ID_SETUP,
                                                     label='ConfigureIssue',
                                                     bitmap=wx.Bitmap('img/configissue.png'),
                                                     shortHelp=txt['configIssueH'],
                                                     )
 
-        addArticleTool = self.toolbar.AddLabelTool(wx.ID_ADD,
-                                                   label='AddArticle',
-                                                   bitmap=wx.Bitmap('img/addarticle.png'),
-                                                   shortHelp=txt['addArticleH'],
-                                                   )
 
         getDocTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                                                label='GetDoc',
                                                bitmap=wx.Bitmap('img/getdoc.png'),
                                                shortHelp=txt['getDocH'],
                                                )
+
+        PublishTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+                                                label='Publish',
+                                                bitmap=wx.Bitmap('img/publish.png'),
+                                                shortHelp='',
+                                                )
+        self.toolbar.AddSeparator()
 
         AboutTool = self.toolbar.AddLabelTool(wx.ID_ABOUT,
                                               label='About',
@@ -150,14 +172,15 @@ class MainFrame(wx.Frame):
                                              )
 
         self.Bind(wx.EVT_TOOL, self.OnConfigIssue, configIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnAddArticles, addArticleTool)
         self.Bind(wx.EVT_TOOL, self.OnCreateDoc, getDocTool)
         self.Bind(wx.EVT_TOOL, self.OnAbout, AboutTool)
         self.Bind(wx.EVT_TOOL, self.OnQuit, quitTool)
+        #TODO: More binding...
 
-        if not DEBUG:
-            self.toolbar.EnableTool(wx.ID_ADD, False)        #Enable after issue configured
-        if os.name != 'nt':  #Is not Windows
+        for tool in NewIssueTool, OpenIssueTool, SaveIssueTool, PublishTool:
+            self.toolbar.EnableTool(tool.Id, False)
+
+        if os.name != 'nt':  #No Windows, no word-support
             self.toolbar.EnableTool(getDocTool.Id, False)
         self.toolbar.Realize()
 
@@ -191,6 +214,14 @@ class MainFrame(wx.Frame):
                   self.articleList)
 
         # Article list toolbox
+        self.btnAddArticle = wx.BitmapButton(self.panel, wx.ID_UP,
+                                             wx.Bitmap('img/addarticle.png'),
+                                             style=wx.NO_BORDER|wx.BU_EXACTFIT)
+
+        self.btnDel = wx.BitmapButton(self.panel, wx.ID_DELETE,
+                                     wx.Bitmap('img/delete.png'),
+                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
+
         self.btnUp = wx.BitmapButton(self.panel, wx.ID_UP,
                                      wx.Bitmap('img/up.png'),
                                      style=wx.NO_BORDER|wx.BU_EXACTFIT)
@@ -203,17 +234,18 @@ class MainFrame(wx.Frame):
                                      wx.Bitmap('img/modify.png'),
                                      style=wx.NO_BORDER|wx.BU_EXACTFIT)
 
-        self.btnDel = wx.BitmapButton(self.panel, wx.ID_DELETE,
-                                     wx.Bitmap('img/delete.png'),
-                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
 
-        for button in (self.btnUp, self.btnDn, self.btnMdf, self.btnDel):
+        for button in (self.btnAddArticle, self.btnDel, self.btnUp, self.btnDn,
+                       self.btnMdf):
             gridBox.Add(button, flag=wx.EXPAND)
             button.Enable(False)
+        if DEBUG:
+            self.btnAddArticle.Enable(True)
         self.Bind(wx.EVT_BUTTON, self.OnUp, self.btnUp)
         self.Bind(wx.EVT_BUTTON, self.OnDown, self.btnDn)
         self.Bind(wx.EVT_BUTTON, self.OnModifyArticleInfo, self.btnMdf)
         self.Bind(wx.EVT_BUTTON, self.OnDelete, self.btnDel)
+        self.Bind(wx.EVT_BUTTON, self.OnAddArticles, self.btnAddArticle)
 
         # Maintext display and editing 
         self.textBox = wx.TextCtrl(self.panel,
@@ -272,6 +304,15 @@ class MainFrame(wx.Frame):
 
         self.firstConfig = True
 
+    def OnNewIssue(self, e):
+        pass
+
+    def OnOpenIssue(self, e):
+        pass
+
+    def OnSaveIssue(self, e):
+        pass
+
     def OnConfigIssue(self, e):
 
         """
@@ -302,7 +343,7 @@ class MainFrame(wx.Frame):
             self.OnAddArticles(None)
             self.firstConfig = False
 
-        self.toolbar.EnableTool(wx.ID_ADD, True)
+        self.btnAddArticle.Enable(True)
 
         self.updateInfoBar(-1)
         self.SetTitle(self.basicTitle + ': ' +
@@ -568,7 +609,6 @@ class MainFrame(wx.Frame):
                                   wx.TextAttr('black', 'yellow'))
             #Backend action: add subhead info 
             article.subheadLines.append(line)
-            print article.subheadLines
 
     def OnToggleComment(self, e):
         pass
