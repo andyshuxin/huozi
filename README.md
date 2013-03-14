@@ -13,6 +13,7 @@ It includes these tools:
 
 ## System Requirment
 + lxml, BeautifulSoup 4
++ chardet
 + MS Word (for doc output)
 
 ## Package Structure

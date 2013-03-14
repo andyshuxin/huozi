@@ -44,6 +44,8 @@ CLEANERBOOK = (
         (u'■', ''),
         )
 
+AUTHORMARKERS = (u'作者:', u'文:', u'作者：', u'文：')
+
 PUNCTUATIONS = (',', '.', ':', ')', u'，', u'。', u'：', u'）')
 
 #####  Data strcture  #####
@@ -110,11 +112,11 @@ class Issue(object):
 def _isChinese(char):
     return 0x4e00 <= ord(char) < 0x9fa6
 
-def cleanText(input, patternBook=None):
-    if patternBook == None:
-        patternBook = CLEANERBOOK
+def cleanText(inputText, patternBook=CLEANERBOOK):
+    if len(inputText) <= 2:
+        return inputText
 
-    text = input
+    text = inputText
     for patternPair in patternBook:
         key = patternPair[0]
         while string.find(text, key) != -1:
@@ -123,12 +125,12 @@ def cleanText(input, patternBook=None):
     ## Kill spaces and blank lines at BOF and EOF
     while text[0] == ' ' or text[0] == '\n':
         text = text[1:]
-    while text[0:2] == '\r\n':
-        text = text[2:]
+    #while text[0:2] == '\r\n':
+        #text = text[2:]
     while text[-1] == ' ' or text[-1] == '\n':
         text = text[:-1]
-    while text[-2:] == '\r\n':
-        text = text[:-2]
+    #while text[-2:] == '\r\n':
+        #text = text[:-2]
 
     ## Delete unnecessary spaces
     i = 1
@@ -137,41 +139,34 @@ def cleanText(input, patternBook=None):
             # Delete spaces next to Chinese characters
             if _isChinese(text[i-1]) or _isChinese(text[i+1]):
                 text = text[:i] + text[i+1:]
+                i -= 1
             # Combine multiple consecutive spaces
             elif (text[i-1] == ' ') or (text[i+1] == ' '):
                 text = text[:i] + text[i+1:]
+                i -= 1
         i += 1
+
     return text
 
 #####  Parser Module  #####
 
+def _markerPos(html, markers):
+    for marker in markers:
+        if marker in html:
+            return (marker, html.find(marker))
+    return None
 
-def _guessMeta(htmlText, plainText):
+def _guessSubFromHtml(html, url):
+    return None
+    soup = BeautifulSoup(html)
+    H1 = [tag.string for tag in soup.findAll('h1')]
+    H2 = [tag.string for tag in soup.findAll('h2')]
+    H3 = [tag.string for tag in soup.findAll('h3')]
+    P  = [tag.string for tag in soup.findAll('p')]
+    # TODO: People use all sorts of labels for all sorts of purposes,
+    #       how to tell?
 
-    ## Guess title
-    # Extract what's between <title> and </title>
-    titleStart = string.find(htmlText, '<title')
-    titleEnd = string.find(htmlText, '</title>')
-    leftTagEnd = string.find(htmlText, '>', titleStart)
-    if leftTagEnd+1 <= titleEnd:
-        title = cleanText(htmlText[leftTagEnd+1:titleEnd])
-    else:
-        # Unusual tag structure
-        title = '*****'
-
-    ## Guess author
-    if ':' in title or u'：' in title:
-        try:
-            pos = title.index(':')
-        except ValueError:
-            pos = title.index(u'：')
-        if pos <= 3:
-            author = title[:pos]
-            title = title[pos+1:]
-    else:
-        author = ''
-
-    ## Guess subheads
+def _guessSubFromPlainText(plainText):
     subs = []
     lines = cleanText(plainText).split('\n')
 
@@ -195,8 +190,53 @@ def _guessMeta(htmlText, plainText):
             length = len(sub)
             if (endian in PUNCTUATIONS) or length > MAXSUBLEN:
                 subs.remove(sub)
+    return subs
 
-    return (title, author, subs)
+def _guessMeta(htmlText, plainText):
+
+    ## Guess title
+    # Extract what's between <title> and </title>
+    titleStart = string.find(htmlText, '<title')
+    titleEnd = string.find(htmlText, '</title>')
+    leftTagEnd = string.find(htmlText, '>', titleStart)
+    if leftTagEnd+1 <= titleEnd:
+        title = htmlText[leftTagEnd+1:titleEnd]
+    else:
+        # Unusual tag structure
+        title = '*****'
+
+    ## Guess author
+    if ':' in title or u'：' in title:
+        try:
+            pos = title.index(':')
+        except ValueError:
+            pos = title.index(u'：')
+        if pos <= 4:
+            author = title[:pos]
+            title = title[pos+1:]
+        else:
+            author = ''
+    elif _markerPos(htmlText, AUTHORMARKERS) != None:
+        print 'c'
+        marker, pos = _markerPos(htmlText, AUTHORMARKERS)
+        pos += len(marker)
+        L = 0
+        TERMINATORS = ('\n', '\r', '<', '>',)
+        while htmlText[pos+L] not in TERMINATORS:
+            L += 1
+        author = htmlText[pos:pos+L]
+    else:
+        author = ''
+
+    ## Guess subheads
+
+    # Html-based guessing
+    if _guessSubFromHtml(htmlText) != None:
+        subs = _guessSubFromHtml(htmlText)
+    else:
+        subs = _guessSubFromPlainText(plainText)
+
+    return (cleanText(title), cleanText(author), subs)
 
 def parseHtml(htmlText):
 
@@ -226,6 +266,14 @@ def parseHtml(htmlText):
 #####  Grabber module  #####
 def grab(url):
 
+    """
+    Input: a URL to a webpage
+    Output: the webpage
+    Automatically extract charset, if specified, can convert to UTF-8,
+    if possible. Will autodetect if charset is not defined. When all other
+    measures fail, assume UTF-8 and carry on.
+    """
+
     def _isLegit(char):
         """ Return true if char can be part of the name of a charset """
         if (char in string.ascii_letters or
@@ -236,7 +284,6 @@ def grab(url):
            return False
 
     def _urlClean(url):
-        #TODO: transform renren.com -> www.renren.com
         res = url
         if url[:4] != 'http':
             res = 'http://' + url
@@ -260,16 +307,17 @@ def grab(url):
         while _isLegit(html[csPos + L]):
             L += 1
         charset = html[csPos:csPos+L]
-    except ValueError:
-        charset = 'utf-8'
-    charset = 'gbk' if charset == 'gb2312' else charset
-    charset = 'big5-hkscs' if charset == 'big5' else charset
-    try:
-        html = html.decode(charset, 'ignore')
-    except UnicodeDecodeError, err:
-        #TODO
-        print err
+    except ValueError:   #charset not declared
+        try:
+            import chardet
+            charset = chardet.detect(html)['encoding']
+        except ImportError:
+            charset = 'utf-8'
     finally:
+        charset = 'gbk' if charset == 'gb2312' else charset
+        charset = 'big5-hkscs' if charset == 'big5' else charset
+        charset = 'utf-8' if (charset == None) or (charset == '') else charset
+        html = html.decode(charset, 'ignore')
         return html
 
 #####  File operation module  ####

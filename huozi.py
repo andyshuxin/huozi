@@ -75,9 +75,16 @@ txt = {
        'AboutH':        "About",
        'issueNo':       "Issue no.",
        'articleNo':     "Total number of articles: ",
+       'emptyContent':  "The webpage has too little textual content",
        }
 
 #####  UI  #####
+
+class EmptyContentError(Exception):
+    def __init__(self, url):
+        self.text = txt['emptyContent']
+    def __str__(self):
+        return self.text
 
 class MainFrame(wx.Frame):
 
@@ -257,8 +264,8 @@ class MainFrame(wx.Frame):
 
         #Main window
         self.SetSize((800, 600))
-        self.basicTitle = (u'畢昇 ' + __VERSION__ + 
-                          ' (on AEP ' + __AEPVERSION__ + ')')
+        self.basicTitle = (u'活字 ' + __VERSION__ +
+                          ' (AEP: ' + __AEPVERSION__ + ')')
         self.SetTitle(self.basicTitle)
         self.Centre()
         self.Show(True)
@@ -336,11 +343,14 @@ class MainFrame(wx.Frame):
                 htmlText = grab(url)
                 parsed = parseHtml(htmlText)
                 mainText = cleanText(parsed[0])
+                if len(mainText) <= 1:
+                    raise EmptyContentError(url)
                 meta = parsed[1]
                 currentArticle = Article(meta['title'], meta['author'],
                                          mainText, meta['sub'], url=url)
                 self.issue.addArticle(currentArticle)
                 articlesToUpdate.append(currentArticle)
+
             except TypeError, err:
                 dlg = wx.MessageDialog(self.panel,
                                        txt['graberror']+ url +': '+str(err),
@@ -348,6 +358,16 @@ class MainFrame(wx.Frame):
                                        wx.OK|wx.ICON_INFORMATION)
                 dlg.ShowModal()
                 dlg.Destroy()
+                continue
+
+            except EmptyContentError, err:
+                dlg = wx.MessageDialog(self.panel,
+                                       txt['graberror']+ url +': '+str(err),
+                                       txt['graberrorCap'],
+                                       wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+                continue
 
         #Update articleList box
         pos = self.articleList.GetCount()
@@ -464,6 +484,10 @@ class MainFrame(wx.Frame):
         article.text = text
         self.textBox.SetValue(text)
         self.updateTextBox()
+
+        for sub in article.subheadLines:
+            if sub not in text:
+                article.delSub(sub)
 
         self.textBox.SetEditable(False)
         self.btnSubhead.Enable(False)

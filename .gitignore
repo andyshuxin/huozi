@@ -10,6 +10,7 @@ ExtMainText.py
 *.htm
 *.txt
 
-test.py
+test*
+
 
 tags
