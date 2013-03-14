@@ -7,7 +7,7 @@
 
 #Copyright (C) 2013 Shu Xin
 
-__VERSION__ = '0.01'
+__VERSION__ = 'D'
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
 __COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
@@ -43,8 +43,6 @@ CLEANERBOOK = (
         (u'－－', u'——'),
         (u'■', ''),
         )
-
-CLEANER_EXCEPTION_BOOK = {}
 
 PUNCTUATIONS = (',', '.', ':', ')', u'，', u'。', u'：', u'）')
 
@@ -211,8 +209,8 @@ def parseHtml(htmlText):
 
     mainText = extMainText(htmlText)
     ratio = 0.5
-    while len(get_text(mainText)) < 10:
-        mainText = extMainText(htmlText, ratio, True)
+    while (len(get_text(mainText)) <= 1) and (ratio > 0):
+        mainText = extMainText(htmlText, ratio, False)
         ratio -= 0.1
     mainText = get_text(mainText)
 
@@ -265,6 +263,7 @@ def grab(url):
     except ValueError:
         charset = 'utf-8'
     charset = 'gbk' if charset == 'gb2312' else charset
+    charset = 'big5-hkscs' if charset == 'big5' else charset
     try:
         html = html.decode(charset, 'ignore')
     except UnicodeDecodeError, err:
