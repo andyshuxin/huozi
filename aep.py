@@ -188,13 +188,13 @@ def _guessMeta(htmlText, plainText):
         Ldown2 = len(lines[lineNo+2])
         avgL = (Lup1 + Lup2 + Ldown1 + Ldown2) / 4
         if (L < SUBTHREDSOLD * avgL):
-            subs.append(lineNo+1)
+            subs.append(lines[lineNo])
         lineNo += 2  #Subheads should be scatterred.
 
         # Exclude phase
         for sub in subs:
-            endian = lines[sub - 1][-1]
-            length = len(lines[sub - 1])
+            endian = sub[-1]
+            length = len(sub)
             if (endian in PUNCTUATIONS) or length > MAXSUBLEN:
                 subs.remove(sub)
 

@@ -3,7 +3,7 @@
 
 #Copyright (C) 2013 Shu Xin
 
-#Bisheng, simplistic DTP
+#Huozi, a simplistic DTP
 
 #This program is free software: you can redistribute it and/or modify
 #it under the terms of the GNU General Public License as published by
@@ -463,6 +463,7 @@ class MainFrame(wx.Frame):
         text = cleanText(text)
         article.text = text
         self.textBox.SetValue(text)
+        self.updateTextBox(-1)
 
         self.ProcessChange()
 
@@ -474,11 +475,7 @@ class MainFrame(wx.Frame):
         pass
 
     def OnTextChange(self, e):
-        textLinesPre = self.textPre.split('\n')
-        textNow = cleanText(self.textBox.GetValue())
-        textLinesNow = text.split('\n')
-        for sub in self.subPre:
-            subheadPre = self.
+        pass
 
     def OnArticleListClick(self, e):
         self.btnMdf.Enable(True)
@@ -506,18 +503,24 @@ class MainFrame(wx.Frame):
         #XXX For some weird reason, textBox.GetInsertionPoint is never -1.
         #    When the focus is off, it's 0. 
 
-        if self.textBox.GetInsertionPoint() == 0:
+        if ((self.textBox.GetInsertionPoint() == 0) or
+            (self.articleList.GetSelection() == -1)):
             return
 
         #Get selected article
-        lineNo = len(self.textBox.GetRange(0, self.textBox.GetInsertionPoint()).split("\n"))
-        if self.articleList.GetSelection() != -1:
-            article = self.getSelectedArticle()
+        pos = self.textBox.GetInsertionPoint()
+        fulltext = self.textBox.GetValue()
+        leftMargin = fulltext.rfind('\n', 0, pos)
+        rightMargin = fulltext.find('\n', pos)
+        line = fulltext[leftMargin:rightMargin]
+        print leftMargin, rightMargin
+        print line
+        article = self.getSelectedArticle()
+        print line in article.subheadLines
 
-        if lineNo in article.subheadLines:
+        #line already in subheads, remove it 
+        if line in article.subheadLines:
             #UI action: dehighlight the line
-            pos = self.textBox.GetInsertionPoint()
-            fulltext = self.textBox.GetRange(0, self.textBox.GetLastPosition())
             try:
                 leftMargin = fulltext.rindex('\n', 0, pos)
             except ValueError:
@@ -526,16 +529,16 @@ class MainFrame(wx.Frame):
                 rightMargin = fulltext.find('\n', pos)
             except ValueError:
                 rightMargin = self.textBox.GetLastPosition()
-            self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr("black", "white",))
+            self.textBox.SetStyle(leftMargin, rightMargin,
+                                  wx.TextAttr("black", "white"))
 
             #Backend action: remove subhead info 
-            article.subheadLines.remove(lineNo)
+            article.subheadLines.remove(line)
+            print article.subheadLines
 
-        #if lineNo not in article.sbuheadLines, add info
+        #lineNo not in article.sbuheadLines, add info
         else:
             #UI action: highlight the line
-            pos = self.textBox.GetInsertionPoint()
-            fulltext = self.textBox.GetRange(0, self.textBox.GetLastPosition())
             try:
                 leftMargin = fulltext.rindex('\n', 0, pos)
             except ValueError:
@@ -544,9 +547,11 @@ class MainFrame(wx.Frame):
                 rightMargin = fulltext.find('\n', pos)
             except ValueError:
                 rightMargin = self.textBox.GetLastPosition()
-            self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
+            self.textBox.SetStyle(leftMargin, rightMargin,
+                                  wx.TextAttr('black', 'yellow'))
             #Backend action: add subhead info 
-            article.subheadLines.append(lineNo)
+            article.subheadLines.append(line)
+            print article.subheadLines
 
     def OnToggleComment(self, e):
         pass
@@ -592,18 +597,10 @@ class MainFrame(wx.Frame):
         selectedTitle = self.articleList.GetString(index)
         selectedArticle = self.getSelectedArticle()
 
+        text = self.textBox.GetValue()
         for subhead in selectedArticle.subheadLines:
-            text = self.textBox.GetValue()
-            if subhead == 1:
-                leftMargin = 0
-                rightMargin = text.find('\n')
-            else:
-                count = 0
-                leftMargin = 0
-                while count < subhead-1:
-                    leftMargin = text.find('\n', leftMargin+1)
-                    count += 1
-                rightMargin = text.find('\n', leftMargin+1)
+            leftMargin = text.find(subhead)
+            rightMargin = leftMargin + len(subhead) + 1
             self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
 
     def ProcessChange(self):
@@ -649,8 +646,7 @@ class MainFrame(wx.Frame):
         print self.issue.ediRemark
         for article in self.issue:
             print article.title
-            print article.text
-            print '*'*20
+            print article.subheadLines
 
 
 def main():

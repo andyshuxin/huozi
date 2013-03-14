@@ -11,8 +11,13 @@ It includes these tools:
 + A html parser that extract its main text and guess title, author, and where the sub-headlines lies.
 + A grabber that grabs a URL, Unicode supported.
 
+## System Requirment
++ lxml, BeautifulSoup 4
++ MS Word (for doc output)
+
 ## Package Structure
 For a closer look at the structure of the package, see [package structure](https://docs.google.com/drawings/d/1a7UuFqxJZ2w612ZCunHIQBt-jXBpSWyJm_HNQ4I4vuE/edit?usp=sharing).
+
 
 ## Author
 My name is Andy Shu Xin. I am a Hong Kong-based journalist and volunteer with a non-profit organization  [Co-China forum](https://cochina.org). I picked up programming since January 2013 and I am more ambitious than my capabilities. So please expect nothing better than chaotic design, horrible mistakes, and spaghetti code style.
