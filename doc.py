@@ -23,7 +23,7 @@ def createDoc(issue):
     #doc = word.Documents.Open('C:\\Dropbox\\aep\\template.doc')
     word.Visible = True
 
-    ## Set up styles
+    ##### Set up styles #####
 
     # Normal Text 
     font = doc.Styles(win32.constants.wdStyleNormal).Font
@@ -66,6 +66,8 @@ def createDoc(issue):
     font.Size = 10
     font.Name = FONT
 
+    ##### Add contents #####
+
     ## Add Header
     C = win32.constants.wdHeaderFooterPrimary
     hdr = u'一五一十周刊第' + issue.issueNum + u'期' + \
@@ -102,20 +104,19 @@ def createDoc(issue):
         rng.Collapse( win32.constants.wdCollapseEnd )
 
         # Main text
-        lineNo = 0
         for line in article.text.split('\n'):
             rng.Collapse( win32.constants.wdCollapseEnd )
             rng.InsertAfter(line+'\r\n')
-            if lineNo + 1 in article.subheadLines:
+            if line in article.subheadLines:
                 rng.Style = win32.constants.wdStyleHeading3
-            lineNo += 1
+
         rng.Collapse( win32.constants.wdCollapseEnd )
         rng.InsertBreak( win32.constants.wdPageBreak )
 
     ## About infomation
     ## TODO
 
-    #Update TOC
+    #Add TOC
     doc.TablesOfContents.Add(doc.Range(tocPos, tocPos), True, 1, 2)
     #doc.TablesOfContents(1).Update()
 
@@ -126,7 +127,7 @@ def createDoc(issue):
     #doc.Close(False)
     #word.Application.Quit()
 
-def test():
+def _test():
     issue = Issue()
     issue.issueNum = '666'
     issue.grandTitle = u'测试刊'
@@ -146,4 +147,4 @@ def test():
     createDoc(issue)
 
 if __name__ == '__main__':
-    test()
+    _test()
