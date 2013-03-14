@@ -1,7 +1,7 @@
-Bisheng
+Huozi
 =======
-Bisheng is a GUI wrapper around AEP (see below) that facilitates production of an online magazine. Bisheng grew out of the experiences of me editing and supervising production of 1510 Weekly.
-For the moment, Bisheng is customized for 1510 Weekly production, hence Chinese-oriented.
+Huozi is a GUI wrapper around AEP (see below) that facilitates production of an online magazine. Huozi grew out of the experiences of me editing and supervising production of 1510 Weekly.
+For the moment, Huozi is customized for 1510 Weekly production, hence Chinese-oriented.
 The package is under development and far from decent usability.
 
 ## AEP
