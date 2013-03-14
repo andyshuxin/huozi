@@ -17,32 +17,31 @@ import string
 import urllib2
 from ExtMainText import extMainText
 from ExtMainText import get_text
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 
 #####  Constants  #####
 
 DEBUG = True
 
-MAXSUBLEN = 12                     #Any line longer is assumed not subheadline
-SUBTHREDSOLD = 0.3
+MAXSUBLEN = 12        # Any line longer is assumed not subheadline
+SUBTHREDSOLD = 0.3    # How relatively short a line would be regarded as sub
 
 CLEANERBOOK = (
-        (u'\u3000', ' '),          #"Ideographic" spaces
-        (u'\u00A0', ' '),          #&nbsp
-        (u'　', ' '),              #Full-width spaces
-        ('\r\n', '\n'),
-        ('\n ', '\n'),
-        #('\r\n ', '\r\n'),
-        ('\n\n', '\n'),            #duplicate paragraph breaks
-        (u'\ue5f1', ''),           #Unknown weird character in CJK
-        ('......',  u'……'),
-        ('...',  u'……'),
-        (u'。。。。。。',  u'……'),
-        (u'。。。',  u'……'),
-        (u'--', u'——'),
-        (u'－－', u'——'),
-        (u'■', ''),
-        )
+               (u'\u3000', ' '),          #"Ideographic" spaces
+               (u'\u00A0', ' '),          #&nbsp
+               (u'　', ' '),              #Full-width spaces
+               ('\r\n', '\n'),
+               ('\n ', '\n'),
+               ('\n\n', '\n'),            #duplicate paragraph breaks
+               (u'\ue5f1', ''),           #Unknown weird character in CJK
+               ('......',  u'……'),
+               ('...',  u'……'),
+               (u'。。。。。。',  u'……'),
+               (u'。。。',  u'……'),
+               (u'--', u'——'),
+               (u'－－', u'——'),
+               (u'■', ''),
+              )
 
 AUTHORMARKERS = (u'作者:', u'文:', u'作者：', u'文：')
 
@@ -53,20 +52,15 @@ PUNCTUATIONS = (',', '.', ':', ')', u'，', u'。', u'：', u'）')
 class Article(object):
 
     def __init__(self, title='', author='', text='',
-                 subheadLines=[], category = '', portraitPath='', url=''):
+                 subheadLines=[], comments=[], category = '',
+                 portraitPath='', url=''):
         self.title = title
         self.author = author
         self.text = text
         self.subheadLines = subheadLines
+        self.comments = comments
         self.portraitPath = portraitPath
         self.url = url
-
-    def __str__(self):
-        return ('====Article====\n' +
-               'Title is '+self.title+'\n'+
-               'Author is '+self.author+'\n'+
-               '***Main text starts ***\n' + self.text + '***Main text ends ***\n' +
-               'Subhead line numbers: ' + str(self.subheadLines))
 
     def addSub(self, sub):
         if sub not in self.subheadLines:
@@ -76,6 +70,14 @@ class Article(object):
         if sub in self.subheadLines:
             self.subheadLines.remove(sub)
 
+    def addComm(self, comm):
+        if comm not in self.comments:
+            self.subheadLines.append(comm)
+
+    def delComm(self, comm):
+        if comm in self.comments:
+            self.subheadLines.remove(comm)
+
 class Issue(object):
 
     def __init__(self, issueNum='', grandTitle='', ediRemark=''):
@@ -83,7 +85,6 @@ class Issue(object):
         self.grandTitle = grandTitle
         self.ediRemark = ediRemark
         self.articleList = []
-        self.categoryList = []
 
     def addArticle(self, article):
         self.articleList.append(article)
@@ -91,23 +92,11 @@ class Issue(object):
     def deleteArticle(self, article):
         self.articleList.remove(article)
 
-    def __str__(self):
-        res = ('Issue no.'+unicode(self.issueNum)+' '+self.grandTitle+'\n'+
-               'total article number:'+unicode(len(self.articleList))+'\n'+
-               'Editor says:'+self.ediRemark+'\n')
-        for article in self.articleList:
-            res += unicode(article) + '\n'
-        return res
-
     def __iter__(self):
         for article in self.articleList:
             yield article
 
-    #def addCategory(self, word, articlesContained):
-        #newCategory = Category(word, articlesContained)
-        #self.categoryList.append(newCategory)
-
-##########  Clearner module  ##########
+#####  Clearner module  #####
 
 def _isChinese(char):
     return 0x4e00 <= ord(char) < 0x9fa6
@@ -125,22 +114,16 @@ def cleanText(inputText, patternBook=CLEANERBOOK):
     ## Kill spaces and blank lines at BOF and EOF
     while text[0] == ' ' or text[0] == '\n':
         text = text[1:]
-    #while text[0:2] == '\r\n':
-        #text = text[2:]
     while text[-1] == ' ' or text[-1] == '\n':
         text = text[:-1]
-    #while text[-2:] == '\r\n':
-        #text = text[:-2]
 
     ## Delete unnecessary spaces
     i = 1
     while i < len(text) - 1:
         if text[i] == ' ':
-            # Delete spaces next to Chinese characters
             if _isChinese(text[i-1]) or _isChinese(text[i+1]):
                 text = text[:i] + text[i+1:]
                 i -= 1
-            # Combine multiple consecutive spaces
             elif (text[i-1] == ' ') or (text[i+1] == ' '):
                 text = text[:i] + text[i+1:]
                 i -= 1
@@ -158,13 +141,13 @@ def _markerPos(html, markers):
 
 def _guessSubFromHtml(html):
     return None
-    soup = BeautifulSoup(html)
-    H1 = [tag.string for tag in soup.findAll('h1')]
-    H2 = [tag.string for tag in soup.findAll('h2')]
-    H3 = [tag.string for tag in soup.findAll('h3')]
-    P  = [tag.string for tag in soup.findAll('p')]
-    # TODO: People use all sorts of labels for all sorts of purposes,
-    #       how to tell?
+    #soup = BeautifulSoup(html)
+    #H1 = [tag.string for tag in soup.findAll('h1')]
+    #H2 = [tag.string for tag in soup.findAll('h2')]
+    #H3 = [tag.string for tag in soup.findAll('h3')]
+    #P  = [tag.string for tag in soup.findAll('p')]
+    ## TODO: People use all sorts of labels for all sorts of purposes,
+    ##       how to tell?
 
 def _guessSubFromPlainText(plainText):
     subs = []
@@ -228,8 +211,6 @@ def _guessMeta(htmlText, plainText):
         author = ''
 
     ## Guess subheads
-
-    # Html-based guessing
     if _guessSubFromHtml(htmlText) != None:
         subs = _guessSubFromHtml(htmlText)
     else:
@@ -267,17 +248,17 @@ def grab(url):
 
     """
     Input: a URL to a webpage
-    Output: the webpage
-    Automatically extract charset, if specified, can convert to UTF-8,
-    if possible. Will autodetect if charset is not defined. When all other
+    Output: the webpage, or an exception instance, if error occurs
+    Automatically extract charset, if specified, and convert to UTF-8.
+    Will autodetect if charset is not defined. When all other
     measures fail, assume UTF-8 and carry on.
     """
 
     def _isLegit(char):
-        """ Return true if char can be part of the name of a charset """
+        """ Return true if char can be part of a charset name """
         if (char in string.ascii_letters or
-           char in string.digits or
-           char == '-'):
+            char in string.digits or
+            char == '-'):
            return True
         else:
            return False
@@ -294,8 +275,8 @@ def grab(url):
     req = urllib2.Request(url)
     try:
         html = urllib2.urlopen(req).read()
-    except:
-        html = ''
+    except urllib2.HTTPError as err:
+        return err
 
     # Get encoding info, and decode accordingly.
     try:

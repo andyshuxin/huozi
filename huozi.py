@@ -39,7 +39,6 @@ import wx
 from aep import Article, Issue
 from aep import grab, parseHtml, cleanText
 from doc import createDoc
-from urllib import urlopen
 
 from aep import DEBUG  #Debug flag
 
@@ -216,23 +215,23 @@ class MainFrame(wx.Frame):
         # Article list toolbox
         self.btnAddArticle = wx.BitmapButton(self.panel, wx.ID_UP,
                                              wx.Bitmap('img/addarticle.png'),
-                                             style=wx.NO_BORDER|wx.BU_EXACTFIT)
+                                             style=wx.BU_EXACTFIT)
 
         self.btnDel = wx.BitmapButton(self.panel, wx.ID_DELETE,
                                      wx.Bitmap('img/delete.png'),
-                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
+                                     style=wx.BU_EXACTFIT)
 
         self.btnUp = wx.BitmapButton(self.panel, wx.ID_UP,
                                      wx.Bitmap('img/up.png'),
-                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
+                                     style=wx.BU_EXACTFIT)
 
         self.btnDn = wx.BitmapButton(self.panel, wx.ID_DOWN,
                                      wx.Bitmap('img/down.png'),
-                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
+                                     style=wx.BU_EXACTFIT)
 
         self.btnMdf = wx.BitmapButton(self.panel, wx.ID_ANY,
                                      wx.Bitmap('img/modify.png'),
-                                     style=wx.NO_BORDER|wx.BU_EXACTFIT)
+                                     style=wx.BU_EXACTFIT)
 
 
         for button in (self.btnAddArticle, self.btnDel, self.btnUp, self.btnDn,
@@ -382,13 +381,15 @@ class MainFrame(wx.Frame):
 
             try:
                 htmlText = grab(url)
+                if isinstance(htmlText, Exception):
+                    raise TypeError
                 parsed = parseHtml(htmlText)
                 mainText = cleanText(parsed[0])
                 if len(mainText) <= 1:
                     raise EmptyContentError(url)
                 meta = parsed[1]
-                currentArticle = Article(meta['title'], meta['author'],
-                                         mainText, meta['sub'], url=url)
+                currentArticle = Article(title=meta['title'], author=meta['author'],
+                                         text=mainText, subheadLines=meta['sub'], url=url)
                 self.issue.addArticle(currentArticle)
                 articlesToUpdate.append(currentArticle)
 
@@ -700,11 +701,11 @@ class MainFrame(wx.Frame):
             print article.subheadLines
 
 
-def main():
+def _main():
     currentIssue = Issue()
     app = wx.App()
     MainFrame(currentIssue, None)
     app.MainLoop()
 
 if __name__ == '__main__':
-    main()
+    _main()
