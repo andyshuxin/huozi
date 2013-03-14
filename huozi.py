@@ -29,7 +29,7 @@
 #  Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
 #  from The Noun Project
 
-__VERSION__ = 'Milestone D'
+__VERSION__ = 'M/S D'
 from aep import __VERSION__ as __AEPVERSION__
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
 __COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
@@ -45,18 +45,18 @@ from aep import DEBUG  #Debug flag
 ####  text  ####
 
 txt = {
-       'issueNumT':     "Set Issue Number",
+       'issueNumT':     "Issue Number",
        'issueNumQ':     "What's the number of issue?",
-       'grandTitleT':   "Set Grand Title for the Issue",
-       'grandTitleQ':   "What's the grand title?",
-       'ediRemarkQ':    "What's the editor's remark?",
-       'ediRemarkT':    "Set editor's remark",
-       'AddArticleQ':   "A list of wanted articles please.",
-       'AddArticleT':   "Article url list",
+       'grandTitleT':   "General Title",
+       'grandTitleQ':   "What's the general title of the issue?",
+       'ediRemarkT':    "Editor's Remarks",
+       'ediRemarkQ':    "What are the editor's remarks?",
+       'AddArticleT':   "Article URLs",
+       'AddArticleQ':   "What are the addresses of the articles (one each line)?",
+       'MdfTitleT':     "Article Title",
        'MdfTitleQ':     "What's the article's title?",
-       'MdfTitleT':     "Article title",
+       'MdfAuthorT':    "Author",
        'MdfAuthorQ':    "What's the article's author?",
-       'MdfAuthorT':    "Article author",
        'DelArticle':    "Delete ",
        'btnUp':         "&Up",
        'btnDn':         "&Down",
@@ -118,19 +118,19 @@ class MainFrame(wx.Frame):
 
         # Main toolbar
         self.toolbar = self.CreateToolBar()
-        NewIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+        newIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                                                  label='NewIssue',
                                                  bitmap=wx.Bitmap('img/newissue.png'),
                                                  shortHelp='',
                                                  )
 
-        OpenIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+        openIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                                                   label='OpenIssue',
                                                   bitmap=wx.Bitmap('img/openissue.png'),
                                                   shortHelp='',
                                                   )
 
-        SaveIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+        saveIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                                                   label='SaveIssue',
                                                   bitmap=wx.Bitmap('img/saveissue.png'),
                                                   shortHelp='',
@@ -151,7 +151,7 @@ class MainFrame(wx.Frame):
                                                shortHelp=txt['getDocH'],
                                                )
 
-        PublishTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+        publishTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                                                 label='Publish',
                                                 bitmap=wx.Bitmap('img/publish.png'),
                                                 shortHelp='',
@@ -176,8 +176,11 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.OnQuit, quitTool)
         #TODO: More binding...
 
-        for tool in NewIssueTool, OpenIssueTool, SaveIssueTool, PublishTool:
+        for tool in newIssueTool, openIssueTool, saveIssueTool, publishTool:
             self.toolbar.EnableTool(tool.Id, False)
+
+        #Disabled because not implemented
+        self.toolbar.EnableTool(AboutTool.Id, False)
 
         if os.name != 'nt':  #No Windows, no word-support
             self.toolbar.EnableTool(getDocTool.Id, False)
@@ -238,8 +241,8 @@ class MainFrame(wx.Frame):
                        self.btnMdf):
             gridBox.Add(button, flag=wx.EXPAND)
             button.Enable(False)
-        if DEBUG:
-            self.btnAddArticle.Enable(True)
+        #if DEBUG:
+            #self.btnAddArticle.Enable(True)
         self.Bind(wx.EVT_BUTTON, self.OnUp, self.btnUp)
         self.Bind(wx.EVT_BUTTON, self.OnDown, self.btnDn)
         self.Bind(wx.EVT_BUTTON, self.OnModifyArticleInfo, self.btnMdf)
@@ -514,7 +517,7 @@ class MainFrame(wx.Frame):
         self.textBox.SetEditable(True)
 
         self.btnSubhead.Enable(True)
-        self.btnComment.Enable(True)
+        #self.btnComment.Enable(True)
         self.btnEdit.Enable(False)
         self.btnSave.Enable(True)
 
@@ -619,12 +622,9 @@ class MainFrame(wx.Frame):
 
     def updateInfoBar(self, index):
 
-        #if self.issue.articleList == []:
-            #return
-
         issueInfo = (
                     txt['issueNo'] + str(self.issue.issueNum) + ' ' +
-                    self.issue.grandTitle +
+                    self.issue.grandTitle + ' ' +
                     txt['articleNo'] + str(len(self.issue.articleList))
                     )
         self.infoBar1.SetLabel(issueInfo)
