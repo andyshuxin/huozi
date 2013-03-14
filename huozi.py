@@ -29,7 +29,7 @@
 #  Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
 #  from The Noun Project
 
-__VERSION__ = 'Build 0312'
+__VERSION__ = 'Milestone D'
 from aep import __VERSION__ as __AEPVERSION__
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
 __COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
@@ -317,11 +317,10 @@ class MainFrame(wx.Frame):
         urlList = urlText.split('\n')
         articlesToUpdate = []
         for url in urlList:
-            if url == '\n':
-                break
+            if len(url) <= 2:
+                continue
             try:
                 for article in self.issue:
-                    duplicate = False
                     if article.url == url:
                         dlg = wx.MessageDialog(self.panel,
                                                txt['duplicate'] + url,
@@ -330,7 +329,7 @@ class MainFrame(wx.Frame):
                         dlg.ShowModal()
                         dlg.Destroy()
                         raise ValueError
-            except ValueError:
+            except ValueError:  #duplicated articles
                 continue
 
             try:
@@ -458,21 +457,19 @@ class MainFrame(wx.Frame):
         self.btnSave.Enable(True)
 
     def OnSaveEdit(self, e):
+
         article = self.getSelectedArticle()
         text = self.textBox.GetValue()
         text = cleanText(text)
         article.text = text
         self.textBox.SetValue(text)
-        self.updateTextBox(-1)
-
-        self.ProcessChange()
+        self.updateTextBox()
 
         self.textBox.SetEditable(False)
         self.btnSubhead.Enable(False)
         self.btnComment.Enable(False)
         self.btnEdit.Enable(True)
         self.btnSave.Enable(False)
-        pass
 
     def OnTextChange(self, e):
         pass
@@ -488,7 +485,7 @@ class MainFrame(wx.Frame):
         if e.GetSelection() == self.articleList.GetCount() - 1:
             self.btnDn.Enable(False)
         self.updateInfoBar(e.GetSelection())
-        self.updateTextBox(e.GetSelection())
+        self.updateTextBox()
 
     def OnArticleListDclick(self, e):
         self.OnModifyArticleInfo(e)
@@ -509,24 +506,21 @@ class MainFrame(wx.Frame):
 
         #Get selected article
         pos = self.textBox.GetInsertionPoint()
-        fulltext = self.textBox.GetValue()
-        leftMargin = fulltext.rfind('\n', 0, pos)
-        rightMargin = fulltext.find('\n', pos)
-        line = fulltext[leftMargin:rightMargin]
-        print leftMargin, rightMargin
-        print line
+        text = self.textBox.GetValue()
+        leftMargin = text.rfind('\n', 0, pos) + 1
+        rightMargin = text.find('\n', pos)
+        rightMargin = len(text) if rightMargin == -1 else rightMargin
+        line = text[leftMargin:rightMargin]
         article = self.getSelectedArticle()
-        print line in article.subheadLines
 
-        #line already in subheads, remove it 
         if line in article.subheadLines:
             #UI action: dehighlight the line
             try:
-                leftMargin = fulltext.rindex('\n', 0, pos)
+                leftMargin = text.rindex('\n', 0, pos)
             except ValueError:
                 leftMargin = 0
             try:
-                rightMargin = fulltext.find('\n', pos)
+                rightMargin = text.find('\n', pos)
             except ValueError:
                 rightMargin = self.textBox.GetLastPosition()
             self.textBox.SetStyle(leftMargin, rightMargin,
@@ -534,17 +528,16 @@ class MainFrame(wx.Frame):
 
             #Backend action: remove subhead info 
             article.subheadLines.remove(line)
-            print article.subheadLines
 
-        #lineNo not in article.sbuheadLines, add info
+        #line not in article.sbuheadLines, add info
         else:
             #UI action: highlight the line
             try:
-                leftMargin = fulltext.rindex('\n', 0, pos)
+                leftMargin = text.rindex('\n', 0, pos)
             except ValueError:
                 leftMargin = 0
             try:
-                rightMargin = fulltext.find('\n', pos)
+                rightMargin = text.find('\n', pos)
             except ValueError:
                 rightMargin = self.textBox.GetLastPosition()
             self.textBox.SetStyle(leftMargin, rightMargin,
@@ -582,10 +575,11 @@ class MainFrame(wx.Frame):
         self.infoBar2.SetLabel('Article title: ' + title)
         self.infoBar3.SetLabel('Author: ' + author)
 
-    def updateTextBox(self, index):
+    def updateTextBox(self):
 
         if self.articleList.GetSelection() == -1:
             return
+        index = self.articleList.GetSelection()
 
         title = self.articleList.GetStringSelection()
         for article in self.issue:
@@ -602,13 +596,6 @@ class MainFrame(wx.Frame):
             leftMargin = text.find(subhead)
             rightMargin = leftMargin + len(subhead) + 1
             self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
-
-    def ProcessChange(self):
-
-        """
-        Update article.subheadLines after main text is changed by user.
-        """
-        pass
 
     def askInfo(self, prompt, dialogTitle, defaultVal='', multiline=False, noCancel=False):
 
