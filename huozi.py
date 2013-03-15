@@ -586,6 +586,9 @@ class MainFrame(wx.Frame):
         self.updateCatInfo()
 
     def OnEditText(self, e):
+
+        self.articleList.Enable(False)
+
         article = self.getSelectedArticle()
         self.textPre = self.textBox.GetValue()
         self.subPre = article.subheadLines
@@ -598,6 +601,8 @@ class MainFrame(wx.Frame):
         self.btnSave.Enable(True)
 
     def OnSaveEdit(self, e):
+
+        self.articleList.Enable(True)
 
         article = self.getSelectedArticle()
         text = self.textBox.GetValue()
@@ -620,6 +625,7 @@ class MainFrame(wx.Frame):
         pass
 
     def OnArticleListClick(self, e):
+
         self.btnMdf.Enable(True)
         self.btnDel.Enable(True)
         self.btnUp.Enable(True)
