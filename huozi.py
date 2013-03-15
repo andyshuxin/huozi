@@ -341,11 +341,11 @@ class MainFrame(wx.Frame):
                                  defaultVal=self.issue.ediRemark,
                                  multiline=True)
 
-        if issueNum != None:
+        if issueNum is not None:
             self.issue.issueNum = issueNum
-        if grandTitle != None:
+        if grandTitle is not None:
             self.issue.grandTitle = grandTitle
-        if ediRemark != None:
+        if ediRemark is not None:
             self.issue.ediRemark = ediRemark
 
         if self.firstConfig:
@@ -369,7 +369,7 @@ class MainFrame(wx.Frame):
         urlText = self.askInfo(txt['AddArticleQ'],
                                txt['AddArticleT'],
                                multiline=True)
-        if urlText == None:
+        if urlText is None:
             return
         urlList = urlText.split('\n')
         articlesToUpdate = []

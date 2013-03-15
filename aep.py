@@ -24,7 +24,7 @@ from ExtMainText import get_text
 DEBUG = True
 
 MAXSUBLEN = 12        # Any line longer is assumed not subheadline
-SUBTHREDSOLD = 0.3    # How relatively short a line would be regarded as sub
+SUBTHREDSOLD = 0.4    # How relatively short a line must be to be a sub
 
 CLEANERBOOK = (
                (u'\u3000', ' '),          #"Ideographic" spaces
@@ -113,10 +113,7 @@ def cleanText(inputText, patternBook=CLEANERBOOK):
             text = string.replace(text, key, patternPair[1])
 
     ## Kill spaces and blank lines at BOF and EOF
-    while text[0] == ' ' or text[0] == '\n':
-        text = text[1:]
-    while text[-1] == ' ' or text[-1] == '\n':
-        text = text[:-1]
+    text = text.strip(' \n')
 
     ## Delete unnecessary spaces
     i = 1
@@ -151,13 +148,18 @@ def _guessSubFromHtml(html):
     ##       how to tell?
 
 def _guessSubFromPlainText(plainText):
+
+    def _subOK(sub):
+        if sub.endswith(PUNCTUATIONS) or len(sub) > MAXSUBLEN:
+            return False
+        return True
+
     subs = []
     lines = cleanText(plainText).split('\n')
 
+    # Include phase
     lineNo = 2
     while lineNo < len(lines) - 2:
-
-        # Include phase
         L = len(lines[lineNo])
         Lup1 = len(lines[lineNo-1])
         Lup2 = len(lines[lineNo-2])
@@ -168,12 +170,9 @@ def _guessSubFromPlainText(plainText):
             subs.append(lines[lineNo])
         lineNo += 2  #Subheads should be scatterred.
 
-        # Exclude phase
-        for sub in subs:
-            endian = sub[-1]
-            length = len(sub)
-            if (endian in PUNCTUATIONS) or length > MAXSUBLEN:
-                subs.remove(sub)
+    # Exclude phase
+    subs = [s for s in subs if _subOK(s)]
+
     return subs
 
 def _guessMeta(htmlText, plainText):
@@ -200,7 +199,7 @@ def _guessMeta(htmlText, plainText):
             title = title[pos+1:]
         else:
             author = ''
-    elif _markerPos(htmlText, AUTHORMARKERS) != None:
+    elif _markerPos(htmlText, AUTHORMARKERS) is not None:
         marker, pos = _markerPos(htmlText, AUTHORMARKERS)
         pos += len(marker)
         L = 0
@@ -212,7 +211,7 @@ def _guessMeta(htmlText, plainText):
         author = ''
 
     ## Guess subheads
-    if _guessSubFromHtml(htmlText) != None:
+    if _guessSubFromHtml(htmlText) is not None:
         subs = _guessSubFromHtml(htmlText)
     else:
         subs = _guessSubFromPlainText(plainText)
@@ -323,7 +322,7 @@ def grab(url):
     finally:
         charset = 'gbk' if charset == 'gb2312' else charset
         charset = 'big5-hkscs' if charset == 'big5' else charset
-        charset = 'utf-8' if (charset == None) or (charset == '') else charset
+        charset = 'utf-8' if (charset is None) or (charset == '') else charset
         html = html.decode(charset, 'ignore')
         return html
 
