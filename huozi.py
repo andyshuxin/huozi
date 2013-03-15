@@ -474,6 +474,7 @@ class MainFrame(wx.Frame):
             self.articleList.Append(cat)
         else:
             self.articleList.Insert(cat, pos+1)
+        self.updateCatInfo()
 
     def OnCreateDoc(self, e):
         createDoc(self.issue)
@@ -659,14 +660,6 @@ class MainFrame(wx.Frame):
 
         if line in article.subheadLines:
             #UI action: dehighlight the line
-            try:
-                leftMargin = text.rindex('\n', 0, pos)
-            except ValueError:
-                leftMargin = 0
-            try:
-                rightMargin = text.find('\n', pos)
-            except ValueError:
-                rightMargin = self.textBox.GetLastPosition()
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   wx.TextAttr("black", "white"))
 
@@ -676,14 +669,6 @@ class MainFrame(wx.Frame):
         #line not in article.sbuheadLines, add info
         else:
             #UI action: highlight the line
-            try:
-                leftMargin = text.rindex('\n', 0, pos)
-            except ValueError:
-                leftMargin = 0
-            try:
-                rightMargin = text.find('\n', pos)
-            except ValueError:
-                rightMargin = self.textBox.GetLastPosition()
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   wx.TextAttr('black', 'yellow'))
             #Backend action: add subhead info 
