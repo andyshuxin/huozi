@@ -21,7 +21,7 @@ def createDoc(issue):
     word = win32.gencache.EnsureDispatch('Word.Application')
     doc = word.Documents.Add()
     #doc = word.Documents.Open('C:\\Dropbox\\aep\\template.doc')
-    word.Visible = True
+    word.Visible = False
 
     ##### Set up styles #####
 
@@ -93,6 +93,7 @@ def createDoc(issue):
     tocPos = rng.End
     rng.InsertBreak( win32.constants.wdPageBreak )
 
+    word.Visible = False
     #rng.Collapse( win32.constants.wdCollapseEnd )
     #articleStart = rng.End
 
