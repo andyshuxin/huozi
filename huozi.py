@@ -21,6 +21,8 @@
 #==== Works by others ====
 #ExtMainText.py:
 #  Copyright (c) 2009, Elias Soong, all rights reserved.
+#Redirect and Error handler in aep.py:
+#  Copyright (c) 2000, 2001, 2002, 2003, 2004 Mark Pilgrim
 #In-app icons:
 #  taken from Default Icon. Credit to interactivemania
 #  (http://www.interactivemania.com).
@@ -29,7 +31,7 @@
 #  Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
 #  from The Noun Project
 
-__VERSION__ = 'M/S D'
+__VERSION__ = 'M/S E'
 from aep import __VERSION__ as __AEPVERSION__
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
 __COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
@@ -62,7 +64,7 @@ txt = {
        'btnDn':         "&Down",
        'btnMdf':        "&Modify",
        'btnDel':        "D&elete",
-       'graberror':     "Something is wrong grabbing: ",
+       'graberror':     "Something is wrong grabbing ",
        'graberrorCap':  "Grabber Error",
        'duplicate':     "Already added the article: ",
        'duplicateCap':  "Duplicate article",
@@ -97,26 +99,24 @@ class MainFrame(wx.Frame):
         self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
         self.DrawUI()
 
-    def DrawUI(self):
-
-        # Panels
+    def DrawPanel(self):
         self.panel = wx.Panel(self, wx.ID_ANY)
-        panelInfoBar = wx.Panel(self.panel, wx.ID_ANY, style=wx.SUNKEN_BORDER)
-        panelInfoBar.SetBackgroundColour(wx.Colour(202, 237, 218))
-        panelInfoBar.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
+        self.panelInfoBar = wx.Panel(self.panel, wx.ID_ANY, style=wx.SUNKEN_BORDER)
+        self.panelInfoBar.SetBackgroundColour(wx.Colour(202, 237, 218))
+        self.panelInfoBar.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
 
-        # Box sizers
-        hBox = wx.BoxSizer(wx.HORIZONTAL)
-        vBoxLeft = wx.BoxSizer(wx.VERTICAL)
-        vBoxRight = wx.BoxSizer(wx.VERTICAL)
-        hBox.Add(vBoxLeft, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
-        hBox.Add(vBoxRight, proportion=3, flag=wx.EXPAND|wx.ALL, border=5)
-        self.panel.SetSizerAndFit(hBox)
-        gridBox = wx.GridSizer(1, 5)   #gridBoxer scales better
-        vBoxLeft.Add(gridBox, proportion=0, flag=wx.EXPAND)
-        vBoxRight.Add(panelInfoBar, 0, flag=wx.EXPAND)
+    def DrawBoxSizers(self):
+        self.hBox = wx.BoxSizer(wx.HORIZONTAL)
+        self.vBoxLeft = wx.BoxSizer(wx.VERTICAL)
+        self.vBoxRight = wx.BoxSizer(wx.VERTICAL)
+        self.hBox.Add(self.vBoxLeft, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
+        self.hBox.Add(self.vBoxRight, proportion=3, flag=wx.EXPAND|wx.ALL, border=5)
+        self.panel.SetSizerAndFit(self.hBox)
+        self.gridBox = wx.GridSizer(1, 5)   #self.gridBoxer scales better
+        self.vBoxLeft.Add(self.gridBox, proportion=0, flag=wx.EXPAND)
+        self.vBoxRight.Add(self.panelInfoBar, 0, flag=wx.EXPAND)
 
-        # Main toolbar
+    def DrawMainToolbar(self):
         self.toolbar = self.CreateToolBar()
         newIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                                                  label='NewIssue',
@@ -186,16 +186,16 @@ class MainFrame(wx.Frame):
             self.toolbar.EnableTool(getDocTool.Id, False)
         self.toolbar.Realize()
 
-        # Information bars
+    def DrawInfoBars(self):
         # TODO: better formatting and add direct editability
         infoBarBox = wx.BoxSizer(wx.VERTICAL)
-        self.infoBar1 = wx.StaticText(panelInfoBar, wx.ID_ANY, '',
+        self.infoBar1 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
                                 style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
-        self.infoBar2 = wx.StaticText(panelInfoBar, wx.ID_ANY, '',
+        self.infoBar2 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
                                 style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
-        self.infoBar3 = wx.StaticText(panelInfoBar, wx.ID_ANY, '',
+        self.infoBar3 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
                                 style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
         infoBarBox.Add(self.infoBar1, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
@@ -204,57 +204,53 @@ class MainFrame(wx.Frame):
         self.infoBar1.Bind(wx.EVT_LEFT_DOWN, self.OnConfigIssue)
         self.infoBar2.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
         self.infoBar3.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
-        panelInfoBar.SetSizerAndFit(infoBarBox)
+        self.panelInfoBar.SetSizerAndFit(infoBarBox)
 
-        # Article List
+    def DrawArticleListAndButtons(self):
         self.articleList = wx.ListBox(self.panel, wx.ID_ANY, wx.DefaultPosition,
                                       wx.DefaultSize, self.issue.articleList)
-        vBoxLeft.Add(self.articleList, proportion=1, flag=wx.EXPAND)
+        self.vBoxLeft.Add(self.articleList, proportion=1, flag=wx.EXPAND)
         self.Bind(wx.EVT_LISTBOX, self.OnArticleListClick,
                   self.articleList)
         self.Bind(wx.EVT_LISTBOX_DCLICK, self.OnArticleListDclick,
                   self.articleList)
 
-        # Article list toolbox
-        self.btnAddArticle = wx.BitmapButton(self.panel, wx.ID_UP,
-                                             wx.Bitmap('img/addarticle.png'),
-                                             style=wx.BU_EXACTFIT)
+        # Toolbar
+        self.btnAddArticle = wx.BitmapButton(self.panel, wx.ID_ANY,
+                                             wx.Bitmap('img/addarticle.png'),)
 
         self.btnDel = wx.BitmapButton(self.panel, wx.ID_DELETE,
-                                     wx.Bitmap('img/delete.png'),
-                                     style=wx.BU_EXACTFIT)
+                                     wx.Bitmap('img/delete.png'),)
 
         self.btnUp = wx.BitmapButton(self.panel, wx.ID_UP,
-                                     wx.Bitmap('img/up.png'),
-                                     style=wx.BU_EXACTFIT)
+                                     wx.Bitmap('img/up.png'),)
 
         self.btnDn = wx.BitmapButton(self.panel, wx.ID_DOWN,
-                                     wx.Bitmap('img/down.png'),
-                                     style=wx.BU_EXACTFIT)
+                                     wx.Bitmap('img/down.png'),)
 
         self.btnMdf = wx.BitmapButton(self.panel, wx.ID_ANY,
-                                     wx.Bitmap('img/modify.png'),
-                                     style=wx.BU_EXACTFIT)
+                                     wx.Bitmap('img/modify.png'),)
 
 
         for button in (self.btnAddArticle, self.btnDel, self.btnUp, self.btnDn,
                        self.btnMdf):
-            gridBox.Add(button, flag=wx.EXPAND)
+            self.gridBox.Add(button, flag=wx.EXPAND)
             button.Enable(False)
-        #if DEBUG:
-            #self.btnAddArticle.Enable(True)
+        if DEBUG:
+            self.btnAddArticle.Enable(True)
         self.Bind(wx.EVT_BUTTON, self.OnUp, self.btnUp)
         self.Bind(wx.EVT_BUTTON, self.OnDown, self.btnDn)
         self.Bind(wx.EVT_BUTTON, self.OnModifyArticleInfo, self.btnMdf)
         self.Bind(wx.EVT_BUTTON, self.OnDelete, self.btnDel)
         self.Bind(wx.EVT_BUTTON, self.OnAddArticles, self.btnAddArticle)
 
+    def DrawTextboxAndButtons(self):
         # Maintext display and editing 
         self.textBox = wx.TextCtrl(self.panel,
                                    value='',
                                    style=wx.TE_MULTILINE|wx.TE_RICH2)
         self.textBox.SetEditable(False)
-        vBoxRight.Add(self.textBox, 6, flag=wx.EXPAND|wx.TOP|wx.TE_BESTWRAP, border=5)
+        self.vBoxRight.Add(self.textBox, 6, flag=wx.EXPAND|wx.TOP|wx.TE_BESTWRAP, border=5)
         self.textBox.SetFont(wx.Font(11, wx.ROMAN, wx.NORMAL, wx.NORMAL))
         self.Layout()
         self.Bind(wx.EVT_TEXT, self.OnTextChange, self.textBox)
@@ -265,27 +261,27 @@ class MainFrame(wx.Frame):
                                      wx.Bitmap('img/highlight.png'))
 
         self.btnEdit = wx.BitmapButton(self.panel,
-                                  wx.ID_ANY,
-                                  wx.Bitmap('img/edit.png'))
+                                       wx.ID_ANY,
+                                       wx.Bitmap('img/edit.png'))
 
         self.btnComment = wx.BitmapButton(self.panel,
                                           wx.ID_ANY,
                                           wx.Bitmap('img/comment.png'))
 
         self.btnSave = wx.BitmapButton(self.panel,
-                                  wx.ID_ANY,
-                                  wx.Bitmap('img/save.png'))
+                                       wx.ID_ANY,
+                                       wx.Bitmap('img/save.png'))
         self.btnSubhead.Enable(False)
         self.btnComment.Enable(False)
         self.btnEdit.Enable(False)
         self.btnSave.Enable(False)
 
-        hBoxBottom = wx.BoxSizer(wx.HORIZONTAL)
-        hBoxBottom.Add(self.btnEdit, 0)
-        hBoxBottom.Add(self.btnSubhead, 0)
-        hBoxBottom.Add(self.btnComment, 0)
-        hBoxBottom.Add(self.btnSave, 0)
-        vBoxRight.Add(hBoxBottom, 0)
+        self.hBoxBottom = wx.BoxSizer(wx.HORIZONTAL)
+        self.hBoxBottom.Add(self.btnEdit, 0)
+        self.hBoxBottom.Add(self.btnSubhead, 0)
+        self.hBoxBottom.Add(self.btnComment, 0)
+        self.hBoxBottom.Add(self.btnSave, 0)
+        self.vBoxRight.Add(self.hBoxBottom, 0)
         self.Bind(wx.EVT_BUTTON, self.OnToggleSubhead, self.btnSubhead)
         self.Bind(wx.EVT_BUTTON, self.OnToggleComment, self.btnComment)
         self.Bind(wx.EVT_BUTTON, self.OnEditText, self.btnEdit)
@@ -293,10 +289,21 @@ class MainFrame(wx.Frame):
 
         if DEBUG:
             btnDev = wx.Button(self.panel, -1, '[DEV]')
-            hBoxBottom.Add(btnDev, 0)
+            self.hBoxBottom.Add(btnDev, 0)
             self.Bind(wx.EVT_BUTTON, self.printIssue, btnDev)
 
-        #Main window
+
+    def DrawUI(self):
+
+        # Add components
+        self.DrawPanel()
+        self.DrawBoxSizers()
+        self.DrawMainToolbar()
+        self.DrawInfoBars()
+        self.DrawArticleListAndButtons()
+        self.DrawTextboxAndButtons()
+
+        # Set up main frame
         self.SetSize((800, 600))
         self.basicTitle = (u'活字 ' + __VERSION__ +
                           ' (AEP: ' + __AEPVERSION__ + ')')
@@ -385,7 +392,7 @@ class MainFrame(wx.Frame):
             try:
                 htmlText = grab(url)
                 if isinstance(htmlText, Exception):
-                    raise TypeError
+                    raise htmlText
                 parsed = parseHtml(htmlText)
                 mainText = cleanText(parsed[0])
                 if len(mainText) <= 1:
@@ -396,6 +403,16 @@ class MainFrame(wx.Frame):
                 self.issue.addArticle(currentArticle)
                 articlesToUpdate.append(currentArticle)
 
+
+            except EmptyContentError, err:
+                dlg = wx.MessageDialog(self.panel,
+                                       txt['graberror']+ url +': '+str(err),
+                                       txt['graberrorCap'],
+                                       wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+                continue
+
             except TypeError, err:
                 dlg = wx.MessageDialog(self.panel,
                                        txt['graberror']+ url +': '+str(err),
@@ -405,7 +422,7 @@ class MainFrame(wx.Frame):
                 dlg.Destroy()
                 continue
 
-            except EmptyContentError, err:
+            except RuntimeError, err:
                 dlg = wx.MessageDialog(self.panel,
                                        txt['graberror']+ url +': '+str(err),
                                        txt['graberrorCap'],
@@ -659,7 +676,7 @@ class MainFrame(wx.Frame):
         text = self.textBox.GetValue()
         for subhead in selectedArticle.subheadLines:
             leftMargin = text.find(subhead)
-            rightMargin = leftMargin + len(subhead) + 1
+            rightMargin = leftMargin + len(subhead)
             self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
 
     def askInfo(self, prompt, dialogTitle, defaultVal='', multiline=False, noCancel=False):
