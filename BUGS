@@ -4,3 +4,4 @@ When text with highlighted subheads are changed, the subhead information
 When a subtitle is changed in edit mode, it will not be updated in database.
 Can't decode URIs.
 Can't handle some redirects.
+On Windows XP, Highlighting malfunctions for the first or last line, at times.
