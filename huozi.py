@@ -36,7 +36,8 @@ from aep import __VERSION__ as __AEPVERSION__
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
 __COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
-import os, sys
+import os
+import sys
 import wx
 from aep import Article, Issue
 from aep import grab, parseHtml, cleanText
@@ -507,6 +508,16 @@ class MainFrame(wx.Frame):
             self.issue.articleList[articleNumB], self.issue.articleList[articleNumA]
         self.updateInfoBar(itemIndex-1)
         self.updateCatInfo()
+        # On Windows, moving items does not trigger EVT_LISTBOX, which means
+        # OnArticleListClick would not run, leaving buttons inproperly
+        # enabled or disabled.
+        if os.name == 'nt':
+            self.btnUp.Enable(True)
+            self.btnDn.Enable(True)
+            if itemIndex-1 == 0:
+                self.btnUp.Enable(False)
+            if itemIndex-1 == self.articleList.GetCount() - 1:
+                self.btnDn.Enable(False)
 
     def OnDown(self, e):
         itemIndex = self.articleList.GetSelection()
@@ -533,7 +544,13 @@ class MainFrame(wx.Frame):
             self.issue.articleList[articleNumB], self.issue.articleList[articleNumA]
         self.updateInfoBar(itemIndex+1)
         self.updateCatInfo()
-
+        if os.name == 'nt':
+            self.btnUp.Enable(True)
+            self.btnDn.Enable(True)
+            if itemIndex+1 == 0:
+                self.btnUp.Enable(False)
+            if itemIndex+1 == self.articleList.GetCount() - 1:
+                self.btnDn.Enable(False)
 
     def OnModifyItemInfo(self, e):
         itemIndex = self.articleList.GetSelection()
@@ -587,7 +604,10 @@ class MainFrame(wx.Frame):
 
     def OnEditText(self, e):
 
-        self.articleList.Enable(False)
+        for tool in (self.articleList, self.btnAddArticle, self.btnAddCategory,
+                    self.btnDel, self.btnUp, self.btnDn, self.btnMdf):
+            tool.wasEnabled = tool.IsEnabled()
+            tool.Enable(False)
 
         article = self.getSelectedArticle()
         self.textPre = self.textBox.GetValue()
@@ -602,7 +622,10 @@ class MainFrame(wx.Frame):
 
     def OnSaveEdit(self, e):
 
-        self.articleList.Enable(True)
+        for tool in (self.articleList, self.btnAddArticle, self.btnAddCategory,
+                    self.btnDel, self.btnUp, self.btnDn, self.btnMdf):
+            if tool.wasEnabled:
+                tool.Enable(True)
 
         article = self.getSelectedArticle()
         text = self.textBox.GetValue()
@@ -635,6 +658,8 @@ class MainFrame(wx.Frame):
             self.btnUp.Enable(False)
         if e.GetSelection() == self.articleList.GetCount() - 1:
             self.btnDn.Enable(False)
+        if e.GetString().startswith(u'【'):
+            self.btnEdit.Enable(False)
         self.updateInfoBar(e.GetSelection())
         self.updateTextBox()
 
