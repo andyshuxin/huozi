@@ -7,7 +7,7 @@
 
 #Copyright (C) 2013 Shu Xin
 
-__VERSION__ = '0.01'
+__VERSION__ = '0.02'
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
 __COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
@@ -30,6 +30,7 @@ CLEANERBOOK = (
                (u'\u3000', ' '),          #"Ideographic" spaces
                (u'\u00A0', ' '),          #&nbsp
                (u'　', ' '),              #Full-width spaces
+               (u'\t', ' '),
                ('\r\n', '\n'),
                ('\n ', '\n'),
                ('\n\n', '\n'),            #duplicate paragraph breaks
@@ -254,6 +255,28 @@ def grab(url):
     measures fail, assume UTF-8 and carry on.
     """
 
+    class SmartRedirectHandler(urllib2.HTTPRedirectHandler):
+
+        def http_error_301(self, req, fp, code, msg, headers):
+            result = urllib2.HTTPRedirectHandler.http_error_301(
+                self, req, fp, code, msg, headers)
+            result.status = code
+            return result
+
+        def http_error_302(self, req, fp, code, msg, headers):
+            result = urllib2.HTTPRedirectHandler.http_error_302(
+                self, req, fp, code, msg, headers)
+            result.status = code
+            return result
+
+    class DefaultErrorHandler(urllib2.HTTPDefaultErrorHandler):
+
+        def http_error_default(self, req, fp, code, msg, headers):
+            result = urllib2.HTTPError(
+                req.get_full_url(), code, msg, headers, fp)
+            result.status = code
+            return result
+
     def _isLegit(char):
         """ Return true if char can be part of a charset name """
         if (char in string.ascii_letters or
@@ -270,15 +293,19 @@ def grab(url):
         return res
 
     url = _urlClean(url)
-    hdr = {'User-Agent': 'Mozilla/5.0'}
-    req = urllib2.Request(url, headers=hdr)
-    req = urllib2.Request(url)
+    url = url.encode('utf-8')   # In case it's a unicode URI
+    req = urllib2.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    opener = urllib2.build_opener(SmartRedirectHandler(),
+                                  DefaultErrorHandler())
     try:
-        html = urllib2.urlopen(req).read()
-    except urllib2.HTTPError as err:
-        return err
+        html = opener.open(req).read()
+    except urllib2.HTTPError:
+        return RuntimeError("Can't grab!")
+    except urllib2.URLError:
+        return RuntimeError("Bad URL!")
 
     # Get encoding info, and decode accordingly.
+    charset = ''
     try:
         csPos = html.index('charset=') + len('charset=')
         while not _isLegit(html[csPos]):
