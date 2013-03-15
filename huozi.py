@@ -55,8 +55,12 @@ txt = {
        'ediRemarkQ':    "What are the editor's remarks?",
        'AddArticleT':   "Article URLs",
        'AddArticleQ':   "What are the addresses of the articles (one each line)?",
+       'AddCategoryT':  "Add Category",
+       'AddCategoryQ':  "Name of the category:",
        'MdfTitleT':     "Article Title",
        'MdfTitleQ':     "What's the article's title?",
+       'MdfCategoryT':  "Category",
+       'MdfCategoryQ':  "Name of the category:",
        'MdfAuthorT':    "Author",
        'MdfAuthorQ':    "What's the article's author?",
        'DelArticle':    "Delete ",
@@ -103,7 +107,7 @@ class MainFrame(wx.Frame):
         self.panel = wx.Panel(self, wx.ID_ANY)
         self.panelInfoBar = wx.Panel(self.panel, wx.ID_ANY, style=wx.SUNKEN_BORDER)
         self.panelInfoBar.SetBackgroundColour(wx.Colour(202, 237, 218))
-        self.panelInfoBar.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
+        self.panelInfoBar.Bind(wx.EVT_LEFT_DOWN, self.OnModifyItemInfo)
 
     def DrawBoxSizers(self):
         self.hBox = wx.BoxSizer(wx.HORIZONTAL)
@@ -112,7 +116,7 @@ class MainFrame(wx.Frame):
         self.hBox.Add(self.vBoxLeft, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
         self.hBox.Add(self.vBoxRight, proportion=3, flag=wx.EXPAND|wx.ALL, border=5)
         self.panel.SetSizerAndFit(self.hBox)
-        self.gridBox = wx.GridSizer(1, 5)   #self.gridBoxer scales better
+        self.gridBox = wx.GridSizer(2, 3)   #self.gridBoxer scales better
         self.vBoxLeft.Add(self.gridBox, proportion=0, flag=wx.EXPAND)
         self.vBoxRight.Add(self.panelInfoBar, 0, flag=wx.EXPAND)
 
@@ -202,8 +206,8 @@ class MainFrame(wx.Frame):
         infoBarBox.Add(self.infoBar2, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
         infoBarBox.Add(self.infoBar3, 0, flag=wx.TOP|wx.LEFT|wx.BOTTOM|wx.EXPAND, border=5)
         self.infoBar1.Bind(wx.EVT_LEFT_DOWN, self.OnConfigIssue)
-        self.infoBar2.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
-        self.infoBar3.Bind(wx.EVT_LEFT_DOWN, self.OnModifyArticleInfo)
+        self.infoBar2.Bind(wx.EVT_LEFT_DOWN, self.OnModifyItemInfo)
+        self.infoBar3.Bind(wx.EVT_LEFT_DOWN, self.OnModifyItemInfo)
         self.panelInfoBar.SetSizerAndFit(infoBarBox)
 
     def DrawArticleListAndButtons(self):
@@ -219,6 +223,9 @@ class MainFrame(wx.Frame):
         self.btnAddArticle = wx.BitmapButton(self.panel, wx.ID_ANY,
                                              wx.Bitmap('img/addarticle.png'),)
 
+        self.btnAddCategory = wx.BitmapButton(self.panel, wx.ID_ANY,
+                                              wx.Bitmap('img/addcategory.png'),)
+
         self.btnDel = wx.BitmapButton(self.panel, wx.ID_DELETE,
                                      wx.Bitmap('img/delete.png'),)
 
@@ -232,17 +239,20 @@ class MainFrame(wx.Frame):
                                      wx.Bitmap('img/modify.png'),)
 
 
-        for button in (self.btnAddArticle, self.btnDel, self.btnUp, self.btnDn,
-                       self.btnMdf):
+        for button in (self.btnAddArticle, self.btnAddCategory, self.btnDel,
+                       self.btnUp, self.btnDn, self.btnMdf):
             self.gridBox.Add(button, flag=wx.EXPAND)
             button.Enable(False)
         if DEBUG:
             self.btnAddArticle.Enable(True)
-        self.Bind(wx.EVT_BUTTON, self.OnUp, self.btnUp)
-        self.Bind(wx.EVT_BUTTON, self.OnDown, self.btnDn)
-        self.Bind(wx.EVT_BUTTON, self.OnModifyArticleInfo, self.btnMdf)
-        self.Bind(wx.EVT_BUTTON, self.OnDelete, self.btnDel)
-        self.Bind(wx.EVT_BUTTON, self.OnAddArticles, self.btnAddArticle)
+            self.btnAddCategory.Enable(True)
+
+        self.btnUp.Bind(wx.EVT_BUTTON, self.OnUp)
+        self.btnDn.Bind(wx.EVT_BUTTON, self.OnDown)
+        self.btnMdf.Bind(wx.EVT_BUTTON, self.OnModifyItemInfo)
+        self.btnDel.Bind(wx.EVT_BUTTON, self.OnDelete)
+        self.btnAddArticle.Bind(wx.EVT_BUTTON, self.OnAddArticles)
+        self.btnAddCategory.Bind(wx.EVT_BUTTON, self.OnAddCategory)
 
     def DrawTextboxAndButtons(self):
         # Maintext display and editing 
@@ -353,6 +363,7 @@ class MainFrame(wx.Frame):
             self.firstConfig = False
 
         self.btnAddArticle.Enable(True)
+        self.btnAddCategory.Enable(True)
 
         self.updateInfoBar(-1)
         self.SetTitle(self.basicTitle + ': ' +
@@ -373,9 +384,12 @@ class MainFrame(wx.Frame):
             return
         urlList = urlText.split('\n')
         articlesToUpdate = []
+
         for url in urlList:
             if len(url) <= 2:
                 continue
+
+            # Deal with duplicated articles
             try:
                 for article in self.issue:
                     if article.url == url:
@@ -386,7 +400,7 @@ class MainFrame(wx.Frame):
                         dlg.ShowModal()
                         dlg.Destroy()
                         raise ValueError
-            except ValueError:  #duplicated articles
+            except ValueError:
                 continue
 
             try:
@@ -445,6 +459,21 @@ class MainFrame(wx.Frame):
             if pos != count - 1:
                 self.btnDn.Enable(True)
 
+        self.updateCatInfo()
+
+    def OnAddCategory(self, e):
+        cat = self.askInfo(txt['AddCategoryQ'],
+                           txt['AddCategoryT'])
+        if cat is None:
+            return
+
+        #Update articleList box
+        cat = u'【' + cat + u'】'
+        pos = self.articleList.GetSelection()
+        if pos == -1:
+            self.articleList.Append(cat)
+        else:
+            self.articleList.Insert(cat, pos+1)
 
     def OnCreateDoc(self, e):
         createDoc(self.issue)
@@ -454,6 +483,8 @@ class MainFrame(wx.Frame):
 
     def OnUp(self, e):
         itemIndex = self.articleList.GetSelection()
+
+        # Swap display
         if itemIndex != 0:
             selectedTitle = self.articleList.GetString(itemIndex)
             swappedTitle = self.articleList.GetString(itemIndex-1)
@@ -463,17 +494,23 @@ class MainFrame(wx.Frame):
             if itemIndex == 1:
                 self.btnUp.Enable(False)
 
-        for article in self.issue:
-            if article.title == selectedTitle:
-                articleNumA = self.issue.articleList.index(article)
-            elif article.title == swappedTitle:
-                articleNumB = self.issue.articleList.index(article)
-        self.issue.articleList[articleNumA], self.issue.articleList[articleNumB] =\
-        self.issue.articleList[articleNumB], self.issue.articleList[articleNumA]
+        # Swap storage order
+        if not (selectedTitle.startswith(u'【') or
+                swappedTitle.startswith(u'【')):
+            for article in self.issue:
+                if article.title == selectedTitle:
+                    articleNumA = self.issue.articleList.index(article)
+                elif article.title == swappedTitle:
+                    articleNumB = self.issue.articleList.index(article)
+            self.issue.articleList[articleNumA], self.issue.articleList[articleNumB] =\
+            self.issue.articleList[articleNumB], self.issue.articleList[articleNumA]
         self.updateInfoBar(itemIndex-1)
+        self.updateCatInfo()
 
     def OnDown(self, e):
         itemIndex = self.articleList.GetSelection()
+
+        # Swap display
         if itemIndex != self.articleList.GetCount() - 1:
             selectedTitle = self.articleList.GetString(itemIndex)
             swappedTitle = self.articleList.GetString(itemIndex+1)
@@ -483,48 +520,69 @@ class MainFrame(wx.Frame):
             if itemIndex == self.articleList.GetCount() - 2:
                 self.btnDn.Enable(False)
 
-        for article in self.issue:
-            if article.title == selectedTitle:
-                articleNumA = self.issue.articleList.index(article)
-            elif article.title == swappedTitle:
-                articleNumB = self.issue.articleList.index(article)
-        self.issue.articleList[articleNumA], self.issue.articleList[articleNumB] =\
-        self.issue.articleList[articleNumB], self.issue.articleList[articleNumA]
+        # Swap storage order
+        if not (selectedTitle.startswith(u'【') or
+                swappedTitle.startswith(u'【')):
+            for article in self.issue:
+                if article.title == selectedTitle:
+                    articleNumA = self.issue.articleList.index(article)
+                elif article.title == swappedTitle:
+                    articleNumB = self.issue.articleList.index(article)
+            self.issue.articleList[articleNumA], self.issue.articleList[articleNumB] =\
+            self.issue.articleList[articleNumB], self.issue.articleList[articleNumA]
         self.updateInfoBar(itemIndex+1)
+        self.updateCatInfo()
 
 
-    def OnModifyArticleInfo(self, e):
+    def OnModifyItemInfo(self, e):
         itemIndex = self.articleList.GetSelection()
-        if itemIndex == -1:
-            return
-        selectedArticle = self.getSelectedArticle()
-        title = self.askInfo(txt['MdfTitleQ'], txt['MdfTitleT'],
-                             selectedArticle.title,
-                             False, True)
-        author = self.askInfo(txt['MdfAuthorQ'], txt['MdfAuthorT'],
-                              selectedArticle.author,
-                              False, True)
-        selectedArticle.title = title
-        selectedArticle.author = author
+        if self.articleList.GetStringSelection()[0] == u'【':
+            cat = self.askInfo(txt['MdfCategoryQ'], txt['MdfCategoryT'],
+                               self.articleList.GetStringSelection()[1:-1],
+                               False, True)
+            cat = u'【' + cat + u'】'
+            if cat is not None:
+                self.articleList.SetString(itemIndex, cat)
+        else:
+            if itemIndex == -1:
+                return
+            selectedArticle = self.getSelectedArticle()
+            title = self.askInfo(txt['MdfTitleQ'], txt['MdfTitleT'],
+                                 selectedArticle.title,
+                                 False, True)
+            author = self.askInfo(txt['MdfAuthorQ'], txt['MdfAuthorT'],
+                                  selectedArticle.author,
+                                  False, True)
+            if title is not None:
+                selectedArticle.title = title
+            if author is not None:
+                selectedArticle.author = author
 
-        self.articleList.SetString(itemIndex, selectedArticle.title)
-        self.updateInfoBar(itemIndex)
+            self.articleList.SetString(itemIndex, selectedArticle.title)
+            self.updateInfoBar(itemIndex)
+
+        self.updateCatInfo()
 
     def OnDelete(self, e):
         itemIndex = self.articleList.GetSelection()
         selectedTitle = self.articleList.GetString(itemIndex)
-        dlgYesNo = wx.MessageDialog(None, txt['DelArticle']+selectedTitle+" ?", style=wx.YES|wx.NO)
-        if dlgYesNo.ShowModal() != wx.ID_YES:
-            return
-        selectedArticle = self.getSelectedArticle()
+
+        if not selectedTitle.startswith(u'【'):
+            dlgYesNo = wx.MessageDialog(None, txt['DelArticle']+selectedTitle+" ?", style=wx.YES|wx.NO)
+            if dlgYesNo.ShowModal() != wx.ID_YES:
+                return
+            selectedArticle = self.getSelectedArticle()
+            self.issue.deleteArticle(selectedArticle)
+
         self.articleList.Delete(itemIndex)
-        self.issue.deleteArticle(selectedArticle)
+
         for button in (self.btnUp, self.btnDn, self.btnMdf, self.btnDel,
                        self.btnSubhead, self.btnComment, self.btnEdit,
                        self.btnSave):
             button.Enable(False)
         self.updateInfoBar(-1)
         self.textBox.SetValue('')
+        self.updateCatInfo()
 
     def OnEditText(self, e):
         article = self.getSelectedArticle()
@@ -574,7 +632,7 @@ class MainFrame(wx.Frame):
         self.updateTextBox()
 
     def OnArticleListDclick(self, e):
-        self.OnModifyArticleInfo(e)
+        self.OnModifyItemInfo(e)
 
     def OnToggleSubhead(self, e):
 
@@ -651,6 +709,8 @@ class MainFrame(wx.Frame):
             self.infoBar3.SetLabel('')
             return
         selectedTitle = self.articleList.GetString(index)
+        if selectedTitle[0] == u'【':
+            return
         selectedArticle = self.getSelectedArticle()
         title = selectedArticle.title
         author = selectedArticle.author
@@ -659,7 +719,8 @@ class MainFrame(wx.Frame):
 
     def updateTextBox(self):
 
-        if self.articleList.GetSelection() == -1:
+        if ((self.articleList.GetSelection() == -1) or
+            (self.articleList.GetStringSelection()[0] == u'【')):
             return
         index = self.articleList.GetSelection()
 
@@ -678,6 +739,19 @@ class MainFrame(wx.Frame):
             leftMargin = text.find(subhead)
             rightMargin = leftMargin + len(subhead)
             self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
+
+    def updateCatInfo(self):
+        cat = ''
+        for i in range(0, self.articleList.GetCount()):
+            s = self.articleList.GetString(i)
+            if s.startswith(u'【'):
+                cat = s[1:-1]
+            else:
+                for article in self.issue.articleList:
+                    if article.title == s:
+                        break
+                article.category = cat
+        pass
 
     def askInfo(self, prompt, dialogTitle, defaultVal='', multiline=False, noCancel=False):
 
@@ -716,6 +790,7 @@ class MainFrame(wx.Frame):
         for article in self.issue:
             print article.title
             print article.subheadLines
+            print article.category
 
 
 def _main():

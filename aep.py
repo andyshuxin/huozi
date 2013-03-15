@@ -17,7 +17,11 @@ import string
 import urllib2
 from ExtMainText import extMainText
 from ExtMainText import get_text
-#from bs4 import BeautifulSoup
+try:
+    import chardet
+    hasChardet = True
+except ImportError:
+    hasChardet = False
 
 #####  Constants  #####
 
@@ -60,6 +64,7 @@ class Article(object):
         self.text = text
         self.subheadLines = subheadLines
         self.comments = comments
+        self.category = category
         self.portraitPath = portraitPath
         self.url = url
 
@@ -313,11 +318,10 @@ def grab(url):
         while _isLegit(html[csPos + L]):
             L += 1
         charset = html[csPos:csPos+L]
-    except ValueError:   #charset not declared
-        try:
-            import chardet
+    except ValueError:   #charset not found
+        if hasChardet:
             charset = chardet.detect(html)['encoding']
-        except ImportError:
+        else:
             charset = 'utf-8'
     finally:
         charset = 'gbk' if charset == 'gb2312' else charset

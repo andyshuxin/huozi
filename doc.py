@@ -97,7 +97,17 @@ def createDoc(issue):
     #articleStart = rng.End
 
     ## Add articles
+    rng.Collapse( win32.constants.wdCollapseEnd )
+    category = ''
     for article in issue.articleList:
+
+        # Category
+        if article.category != category:
+            category = article.category
+            rng.InsertAfter(u'【' + category + u'】' + '\r\n')
+            rng.Style = win32.constants.wdStyleHeading1
+            rng.Collapse( win32.constants.wdCollapseEnd )
+
         # Title
         rng.InsertAfter(article.author + u'：' + article.title + '\r\n')
         rng.Style = win32.constants.wdStyleHeading2
