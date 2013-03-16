@@ -43,7 +43,12 @@ import wx
 from aep import Article, Issue
 from aep import grab, parseHtml, cleanText, createDoc
 
-from aep import DEBUG  #Debug flag
+try:
+    with open('DEBUG'): pass
+    DEBUG = True
+except IOError:
+    DEBUG = False
+
 
 ####  text  ####
 
@@ -159,7 +164,7 @@ class MainFrame(wx.Frame):
                                                 )
         self.toolbar.AddSeparator()
 
-        AboutTool = self.toolbar.AddLabelTool(wx.ID_ABOUT,
+        aboutTool = self.toolbar.AddLabelTool(wx.ID_ABOUT,
                                               label='About',
                                               bitmap=wx.Bitmap('img/about.png'),
                                               shortHelp=txt['AboutH'],
@@ -171,18 +176,20 @@ class MainFrame(wx.Frame):
                                              shortHelp=txt['quitH'],
                                              )
 
+        self.Bind(wx.EVT_TOOL, self.OnNewIssue, newIssueTool)
+        self.Bind(wx.EVT_TOOL, self.OnOpenIssue, openIssueTool)
+        self.Bind(wx.EVT_TOOL, self.OnSaveIssue, saveIssueTool)
         self.Bind(wx.EVT_TOOL, self.OnConfigIssue, configIssueTool)
         self.Bind(wx.EVT_TOOL, self.OnCreateDoc, self.getDocTool)
-        self.Bind(wx.EVT_TOOL, self.OnAbout, AboutTool)
+        self.Bind(wx.EVT_TOOL, self.OnAbout, aboutTool)
         self.Bind(wx.EVT_TOOL, self.OnQuit, quitTool)
-        #TODO: More binding...
 
-        for tool in (newIssueTool, openIssueTool, saveIssueTool, publishTool,
-                     self.getDocTool):
+        for tool in (saveIssueTool, publishTool, self.getDocTool):
             self.toolbar.EnableTool(tool.Id, False)
 
         #Disabled because not implemented
-        self.toolbar.EnableTool(AboutTool.Id, False)
+        for tool in (newIssueTool, openIssueTool, aboutTool):
+            self.toolbar.EnableTool(tool.Id, False)
 
         self.toolbar.Realize()
 
@@ -730,6 +737,7 @@ class MainFrame(wx.Frame):
         index = self.articleList.GetSelection()
 
         title = self.articleList.GetStringSelection()
+        #TODO replace with getSelectedArticle()
         for article in self.issue:
             if article.title == title:
                 text = article.text
@@ -774,7 +782,7 @@ class MainFrame(wx.Frame):
                                        defaultVal, style)
 
         res = None
-        if infoDialog.ShowModal() == wx.ID_OK:  #TODO Scrutize input
+        if infoDialog.ShowModal() == wx.ID_OK:
             res = unicode(infoDialog.GetValue())
         else:
             res = None

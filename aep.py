@@ -41,7 +41,11 @@ except ImportError:
 
 #####  Constants  #####
 
-DEBUG = True
+try:
+    with open('DEBUG'): pass
+    DEBUG = True
+except IOError:
+    DEBUG = False
 
 MAXSUBLEN = 12        # Any line longer is assumed not subheadline
 SUBTHREDSOLD = 0.4    # How relatively short a line must be to be a sub
