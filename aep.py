@@ -421,7 +421,6 @@ def createDoc(issue):
 
     ## Add Editor's Remark
     rng.InsertAfter(u'【编者的话】\r\n')
-    print rng.Text
     rng.InsertAfter(issue.ediRemark)
     rng.Collapse( win32.constants.wdCollapseEnd )
     rng.InsertBreak( win32.constants.wdPageBreak )
