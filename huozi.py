@@ -1,35 +1,36 @@
 #!/usr/bin/env python
 #coding=utf-8
 
-#Copyright (C) 2013 Shu Xin
+# Copyright (C) 2013 Shu Xin
 
-#Huozi, a simplistic DTP
+# Huozi, a simplistic DTP
 
-#This program is free software: you can redistribute it and/or modify
-#it under the terms of the GNU General Public License as published by
-#the Free Software Foundation, either version 3 of the License, or
-#(at your option) any later version.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
-#This program is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#GNU General Public License for more details.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 
-#You should have received a copy of the GNU General Public License
-#along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#==== Works by others ====
-#ExtMainText.py:
-#  Copyright (c) 2009, Elias Soong, all rights reserved.
-#Redirect and Error handler in aep.py:
-#  Copyright (c) 2000, 2001, 2002, 2003, 2004 Mark Pilgrim
-#In-app icons:
-#  taken from Default Icon. Credit to interactivemania
-#  (http://www.interactivemania.com).
-#Applicaion icon: 
-#  Downloaded from http://thenounproject.com/noun/keyboard/#icon-No3041
-#  Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
-#  from The Noun Project
+# ==== Works by others ====
+# ExtMainText.py:
+#   Copyright (c) 2009, Elias Soong, all rights reserved.
+# Redirect and Error handler in aep.py:
+#   taken from Dive into Python,
+#   Copyright (c) 2000, 2001, 2002, 2003, 2004 Mark Pilgrim
+# In-app icons:
+#   taken from Default Icon. Credit to interactivemania
+#   (http://www.interactivemania.com).
+# Applicaion icon: 
+#   Downloaded from http://thenounproject.com/noun/keyboard/#icon-No3041
+#   Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
+#   from The Noun Project
 
 __VERSION__ = 'M/S E'
 from aep import __VERSION__ as __AEPVERSION__
@@ -40,8 +41,7 @@ import os
 import sys
 import wx
 from aep import Article, Issue
-from aep import grab, parseHtml, cleanText
-from doc import createDoc
+from aep import grab, parseHtml, cleanText, createDoc
 
 from aep import DEBUG  #Debug flag
 
@@ -54,8 +54,8 @@ txt = {
        'grandTitleQ':   "What's the general title of the issue?",
        'ediRemarkT':    "Editor's Remarks",
        'ediRemarkQ':    "What are the editor's remarks?",
-       'AddArticleT':   "Article URLs",
-       'AddArticleQ':   "What are the addresses of the articles (one each line)?",
+       'AddArticleT':   "Add Articles",
+       'AddArticleQ':   "URLs to the articles (one each line):",
        'AddCategoryT':  "Add Category",
        'AddCategoryQ':  "Name of the category:",
        'MdfTitleT':     "Article Title",
@@ -65,10 +65,6 @@ txt = {
        'MdfAuthorT':    "Author",
        'MdfAuthorQ':    "What's the article's author?",
        'DelArticle':    "Delete ",
-       'btnUp':         "&Up",
-       'btnDn':         "&Down",
-       'btnMdf':        "&Modify",
-       'btnDel':        "D&elete",
        'graberror':     "Something is wrong grabbing ",
        'graberrorCap':  "Grabber Error",
        'duplicate':     "Already added the article: ",
@@ -150,7 +146,7 @@ class MainFrame(wx.Frame):
                                                     )
 
 
-        getDocTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+        self.getDocTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                                                label='GetDoc',
                                                bitmap=wx.Bitmap('img/getdoc.png'),
                                                shortHelp=txt['getDocH'],
@@ -176,19 +172,18 @@ class MainFrame(wx.Frame):
                                              )
 
         self.Bind(wx.EVT_TOOL, self.OnConfigIssue, configIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnCreateDoc, getDocTool)
+        self.Bind(wx.EVT_TOOL, self.OnCreateDoc, self.getDocTool)
         self.Bind(wx.EVT_TOOL, self.OnAbout, AboutTool)
         self.Bind(wx.EVT_TOOL, self.OnQuit, quitTool)
         #TODO: More binding...
 
-        for tool in newIssueTool, openIssueTool, saveIssueTool, publishTool:
+        for tool in (newIssueTool, openIssueTool, saveIssueTool, publishTool,
+                     self.getDocTool):
             self.toolbar.EnableTool(tool.Id, False)
 
         #Disabled because not implemented
         self.toolbar.EnableTool(AboutTool.Id, False)
 
-        if os.name != 'nt':  #No Windows, no word-support
-            self.toolbar.EnableTool(getDocTool.Id, False)
         self.toolbar.Realize()
 
     def DrawInfoBars(self):
@@ -244,9 +239,6 @@ class MainFrame(wx.Frame):
                        self.btnUp, self.btnDn, self.btnMdf):
             self.gridBox.Add(button, flag=wx.EXPAND)
             button.Enable(False)
-        if DEBUG:
-            self.btnAddArticle.Enable(True)
-            self.btnAddCategory.Enable(True)
 
         self.btnUp.Bind(wx.EVT_BUTTON, self.OnUp)
         self.btnDn.Bind(wx.EVT_BUTTON, self.OnDown)
@@ -264,7 +256,6 @@ class MainFrame(wx.Frame):
         self.vBoxRight.Add(self.textBox, 6, flag=wx.EXPAND|wx.TOP|wx.TE_BESTWRAP, border=5)
         self.textBox.SetFont(wx.Font(11, wx.ROMAN, wx.NORMAL, wx.NORMAL))
         self.Layout()
-        self.Bind(wx.EVT_TEXT, self.OnTextChange, self.textBox)
 
         # Buttons to manipulate the text
         self.btnSubhead = wx.BitmapButton(self.panel,
@@ -314,6 +305,11 @@ class MainFrame(wx.Frame):
         self.DrawArticleListAndButtons()
         self.DrawTextboxAndButtons()
 
+        if DEBUG:
+            self.btnAddArticle.Enable(True)
+            self.btnAddCategory.Enable(True)
+            self.toolbar.EnableTool(self.getDocTool.Id, True)
+
         # Set up main frame
         self.SetSize((800, 600))
         self.basicTitle = (u'活字 ' + __VERSION__ +
@@ -342,7 +338,6 @@ class MainFrame(wx.Frame):
         issueNum = self.askInfo(txt['issueNumQ'],
                                 txt['issueNumT'],
                                 defaultVal=self.issue.issueNum)
-
         grandTitle = self.askInfo(txt['grandTitleQ'],
                                   txt['grandTitleT'],
                                   defaultVal=self.issue.grandTitle)
@@ -360,11 +355,14 @@ class MainFrame(wx.Frame):
             self.issue.ediRemark = ediRemark
 
         if self.firstConfig:
-            self.OnAddArticles(None)
+            self.OnAddArticles(e)
             self.firstConfig = False
 
         self.btnAddArticle.Enable(True)
         self.btnAddCategory.Enable(True)
+        if os.name == 'nt':
+            # TODO: Registry checking for Word
+            self.toolbar.EnableTool(self.getDocTool.Id, True)
 
         self.updateInfoBar(-1)
         self.SetTitle(self.basicTitle + ': ' +
@@ -428,16 +426,7 @@ class MainFrame(wx.Frame):
                 dlg.Destroy()
                 continue
 
-            except TypeError, err:
-                dlg = wx.MessageDialog(self.panel,
-                                       txt['graberror']+ url +': '+str(err),
-                                       txt['graberrorCap'],
-                                       wx.OK|wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                dlg.Destroy()
-                continue
-
-            except RuntimeError, err:
+            except (TypeError, RuntimeError) as err:
                 dlg = wx.MessageDialog(self.panel,
                                        txt['graberror']+ url +': '+str(err),
                                        txt['graberrorCap'],
@@ -643,9 +632,6 @@ class MainFrame(wx.Frame):
         self.btnComment.Enable(False)
         self.btnEdit.Enable(True)
         self.btnSave.Enable(False)
-
-    def OnTextChange(self, e):
-        pass
 
     def OnArticleListClick(self, e):
 

@@ -11,17 +11,33 @@ __VERSION__ = '0.02'
 __AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
 __COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
+
+
+## Constants
+FONT = u'宋体'
+
+
 import sys
+import os
 import codecs
 import string
 import urllib2
 from ExtMainText import extMainText
 from ExtMainText import get_text
 try:
+    import win32com.client as win32
+    hasPyWin = True
+except ImportError:
+    hasPyWin = False
+
+
+try:
     import chardet
     hasChardet = True
 except ImportError:
     hasChardet = False
+
+
 
 #####  Constants  #####
 
@@ -330,6 +346,141 @@ def grab(url):
         html = html.decode(charset, 'ignore')
         return html
 
+
+##### MS Word Export module #####
+def createDoc(issue):
+
+    word = win32.gencache.EnsureDispatch('Word.Application')
+    #doc = word.Documents.Add()
+    doc = word.Documents.Open(os.getcwd() + '\\template.doc')
+
+    ##### Set up styles #####
+
+    # Normal Text 
+    font = doc.Styles(win32.constants.wdStyleNormal).Font
+    font.Size = 11
+    font.Name = FONT
+    paraF = doc.Styles(win32.constants.wdStyleNormal).ParagraphFormat
+    paraF.LineSpacingRule = win32.constants.wdLineSpace1pt5
+    paraF.CharacterUnitFirstLineIndent = 2
+
+    # Heading 1
+    font = doc.Styles(win32.constants.wdStyleHeading1).Font
+    font.Bold = True
+    font.Size = 24
+    font.Name = FONT
+    paraF = doc.Styles(win32.constants.wdStyleHeading1).ParagraphFormat
+    paraF.Alignment = win32.constants.wdAlignParagraphLeft
+    paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
+    paraF.CharacterUnitFirstLineIndent = 0
+
+    # Heading 2
+    font = doc.Styles(win32.constants.wdStyleHeading2).Font
+    font.Bold = True
+    font.Size = 18
+    font.Name = FONT
+    paraF = doc.Styles(win32.constants.wdStyleHeading2).ParagraphFormat
+    paraF.Alignment = win32.constants.wdAlignParagraphCenter
+    paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
+    paraF.CharacterUnitFirstLineIndent = 0
+
+    # Subheads
+    font = doc.Styles(win32.constants.wdStyleHeading3).Font
+    font.Bold = True
+    font.Italic = False
+    font.Size = 11
+    font.Name = FONT
+    paraF = doc.Styles(win32.constants.wdStyleHeading3).ParagraphFormat
+    paraF.Alignment = win32.constants.wdAlignParagraphCenter
+    paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
+    paraF.CharacterUnitFirstLineIndent = 0
+
+    # Foot notes
+    font = doc.Styles(win32.constants.wdStyleQuote).Font
+    font.Bold = True
+    font.Size = 10
+    font.Name = FONT
+
+
+    ##### Add contents #####
+
+    ## Add Header
+    C = win32.constants.wdHeaderFooterPrimary
+    fullTitle = u'一五一十周刊第' + issue.issueNum + u'期' + \
+                u'：' + issue.grandTitle
+    doc.Sections(1).Headers(C).Range.InsertAfter(fullTitle+'\r\n')
+
+    ## Footer requires no additional actions.  ##
+
+    rng = doc.Range(0, 0)
+
+    ## Add Cover page
+    rng.InsertAfter(u'【封面圖片】\r\n')
+    rng.Collapse( win32.constants.wdCollapseEnd )
+    rng.InsertBreak( win32.constants.wdPageBreak )
+
+    ## Add Editor's Remark
+    rng.InsertAfter(u'【编者的话】\r\n')
+    print rng.Text
+    rng.InsertAfter(issue.ediRemark)
+    rng.Collapse( win32.constants.wdCollapseEnd )
+    rng.InsertBreak( win32.constants.wdPageBreak )
+
+    ## Add Contents Page
+    rng.InsertAfter(u'目录\r\n')
+    rng.Collapse( win32.constants.wdCollapseEnd )
+    tocPos = rng.End
+    rng.InsertBreak( win32.constants.wdPageBreak )
+
+    ## Add articles
+    rng.Collapse( win32.constants.wdCollapseEnd )
+    category = ''
+    for article in issue.articleList:
+
+        # Category
+        if article.category != category:
+            category = article.category
+            rng.InsertAfter(u'【' + category + u'】' + '\r\n')
+            rng.Style = win32.constants.wdStyleHeading1
+            rng.Collapse( win32.constants.wdCollapseEnd )
+
+        # Title
+        rng.InsertAfter(article.author + u'：' + article.title + '\r\n')
+        rng.Style = win32.constants.wdStyleHeading2
+        rng.Collapse( win32.constants.wdCollapseEnd )
+
+        # Main text
+        for line in article.text.split('\n'):
+            rng.Collapse( win32.constants.wdCollapseEnd )
+            rng.InsertAfter(line+'\r\n')
+            if line in article.subheadLines:
+                rng.Style = win32.constants.wdStyleHeading3
+
+        rng.Collapse( win32.constants.wdCollapseEnd )
+        rng.InsertBreak( win32.constants.wdPageBreak )
+
+    ## Extra infomation -> embeded in template.doc
+    #infodoc = word.Documents.Open(os.getcwd() + '\\extrainfo.doc')
+    #rng2 = infodoc.Range()
+    #rng2.Copy()
+    #rng.Paste()
+    #infodoc.Close(False)
+
+    # Add TOC
+    doc.TablesOfContents.Add(doc.Range(tocPos, tocPos), True, 1, 2)
+    #doc.TablesOfContents(1).Update()
+
+    # Unify font, just in case
+    rng = doc.Range()
+    rng.Font.Name = FONT
+
+    # Finalizing
+    doc.SaveAs(FileName=os.getcwd() + '\\' + fullTitle,
+               FileFormat=win32.constants.wdFormatDocument)
+    word.Visible = True
+    #word.Application.Quit()
+
+
 #####  File operation module  ####
 
 def readfile(filename):
@@ -360,3 +511,5 @@ def readArgv(n):
         return tuple(res)
     else:
         return tuple(res) + (None,) * (n - len(res))
+
+

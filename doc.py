@@ -3,10 +3,11 @@
 
 #Copyright (C) 2013 Shu Xin
 
+import os
+import codecs
 from urllib import urlopen
 from aep import Article, Issue
 from aep import grab, parseHtml, cleanText
-import codecs
 
 try:
     import win32com.client as win32
@@ -19,9 +20,9 @@ FONT = u'宋体'
 
 def createDoc(issue):
     word = win32.gencache.EnsureDispatch('Word.Application')
-    doc = word.Documents.Add()
-    #doc = word.Documents.Open('C:\\Dropbox\\aep\\template.doc')
-    word.Visible = False
+    #doc = word.Documents.Add()
+    doc = word.Documents.Open(os.getcwd() + '\\template.doc')
+    #word.Visible = False
 
     ##### Set up styles #####
 
@@ -30,14 +31,17 @@ def createDoc(issue):
     font.Size = 11
     font.Name = FONT
     paraF = doc.Styles(win32.constants.wdStyleNormal).ParagraphFormat
-    paraF.LineSpacing = 1.5 * font.Size
-    paraF.CharacterUnitFirstLineIndent = 2   # Heading 1
+    paraF.LineSpacingRule = win32.constants.wdLineSpace1pt5
+    paraF.CharacterUnitFirstLineIndent = 2
+
+    # Heading 1
     font = doc.Styles(win32.constants.wdStyleHeading1).Font
     font.Bold = True
     font.Size = 24
     font.Name = FONT
     paraF = doc.Styles(win32.constants.wdStyleHeading1).ParagraphFormat
     paraF.Alignment = win32.constants.wdAlignParagraphLeft
+    paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
     paraF.CharacterUnitFirstLineIndent = 0
 
     # Heading 2
@@ -47,6 +51,7 @@ def createDoc(issue):
     font.Name = FONT
     paraF = doc.Styles(win32.constants.wdStyleHeading2).ParagraphFormat
     paraF.Alignment = win32.constants.wdAlignParagraphCenter
+    paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
     paraF.CharacterUnitFirstLineIndent = 0
 
     # Subheads
@@ -57,7 +62,7 @@ def createDoc(issue):
     font.Name = FONT
     paraF = doc.Styles(win32.constants.wdStyleHeading3).ParagraphFormat
     paraF.Alignment = win32.constants.wdAlignParagraphCenter
-    paraF.LineSpacing = 2 * font.Size
+    paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
     paraF.CharacterUnitFirstLineIndent = 0
 
     # Foot notes
@@ -66,13 +71,16 @@ def createDoc(issue):
     font.Size = 10
     font.Name = FONT
 
+
     ##### Add contents #####
 
     ## Add Header
     C = win32.constants.wdHeaderFooterPrimary
-    hdr = u'一五一十周刊第' + issue.issueNum + u'期' + \
-          u'： ' + issue.grandTitle
-    word.ActiveDocument.Sections(1).Headers(C).Range.Text = hdr
+    fullTitle = u'一五一十周刊第' + issue.issueNum + u'期' + \
+                u'：' + issue.grandTitle
+    doc.Sections(1).Headers(C).Range.InsertAfter(fullTitle+'\r\n')
+
+    ## Footer requires no additional actions.
 
     rng = doc.Range(0, 0)
 
@@ -93,7 +101,6 @@ def createDoc(issue):
     tocPos = rng.End
     rng.InsertBreak( win32.constants.wdPageBreak )
 
-    word.Visible = False
     #rng.Collapse( win32.constants.wdCollapseEnd )
     #articleStart = rng.End
 
@@ -124,8 +131,12 @@ def createDoc(issue):
         rng.Collapse( win32.constants.wdCollapseEnd )
         rng.InsertBreak( win32.constants.wdPageBreak )
 
-    ## About infomation
-    ## TODO
+    ## About infomation -> embeded in template.doc
+    #infodoc = word.Documents.Open(os.getcwd() + '\\extrainfo.doc')
+    #rng2 = infodoc.Range()
+    #rng2.Copy()
+    #rng.Paste()
+    #infodoc.Close(False)
 
     #Add TOC
     doc.TablesOfContents.Add(doc.Range(tocPos, tocPos), True, 1, 2)
@@ -135,7 +146,9 @@ def createDoc(issue):
     rng = doc.Range()
     rng.Font.Name = FONT
 
-    #doc.Close(False)
+    doc.SaveAs(FileName=os.getcwd() + '\\' + fullTitle,
+               FileFormat=win32.constants.wdFormatDocument)
+    word.Visible = True
     #word.Application.Quit()
 
 def _test():
@@ -151,6 +164,7 @@ def _test():
     article1.title = parsed[1]['title']
     article1.author = parsed[1]['author']
     article1.subheadLines = parsed[1]['sub']
+    article1.category = u'哈'
 
     #print article1.subheadLines
 
