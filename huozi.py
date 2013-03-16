@@ -714,6 +714,9 @@ class MainFrame(wx.Frame):
         if selectedTitle[0] == u'【':
             return
         selectedArticle = self.getSelectedArticle()
+        if os.name == 'nt':
+            if selectedArticle is None:
+                return
         title = selectedArticle.title
         author = selectedArticle.author
         self.infoBar2.SetLabel('Article title: ' + title)
