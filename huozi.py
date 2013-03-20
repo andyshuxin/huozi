@@ -410,6 +410,7 @@ class MainFrame(wx.Frame):
                 continue
 
             # Deal with duplicated articles
+            url = urlClean(url)
             try:
                 for article in self.issue:
                     if article.url == url:
@@ -424,10 +425,7 @@ class MainFrame(wx.Frame):
                 continue
 
             try:
-                url = urlClean(url)
                 htmlText = grab(url)
-                if isinstance(htmlText, Exception):
-                    raise htmlText
                 parsed = parseHtml(htmlText)
                 mainText = cleanText(parsed[0])
                 if len(mainText) <= 1:

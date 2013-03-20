@@ -49,21 +49,21 @@ MAXSUBLEN = 12        # Any line longer is assumed not subheadline
 SUBTHREDSOLD = 0.4    # How relatively short a line must be to be a sub
 
 CLEANERBOOK = (
-               (u'\u3000', ' '),          #Ideographic spaces
-               (u'\u00A0', ' '),          #&nbsp
-               (u'　', ' '),              #Full-width spaces
-               (u'\t', ' '),
-               ('\r\n', '\n'),
-               ('\n ', '\n'),
-               ('\n\n', '\n'),            #duplicate paragraph breaks
-               (u'\ue5f1', ''),           #Unknown weird character in CJK
-               ('......',  u'……'),
-               ('...',  u'……'),
+               (u'\u3000',    ' '),          #Ideographic spaces
+               (u'\u00A0',    ' '),          #&nbsp;
+               (u'　',        ' '),          #Full-width spaces
+               (u'\t',        ' '),
+               ('\r\n',       '\n'),
+               ('\n ',        '\n'),
+               ('\n\n',       '\n'),         #duplicate paragraph breaks
+               (u'\ue5f1',    ''),           #Unknown weird character in CJK
+               ('......',     u'……'),
+               ('...',        u'……'),
                (u'。。。。。。',  u'……'),
-               (u'。。。',  u'……'),
-               (u'--', u'——'),
-               (u'－－', u'——'),
-               (u'■', ''),
+               (u'。。。',    u'……'),
+               (u'--',        u'——'),
+               (u'－－',      u'——'),
+               (u'■',         ''),
               )
 
 AUTHORMARKERS = (u'作者:', u'文:', u'作者：', u'文：')
@@ -76,7 +76,7 @@ class Article(object):
 
     def __init__(self, title='', author='', authorBio='', text='',
                  subheadLines=[], comments=[], category = '',
-                 portraitPath='', url=''):
+                 portraitPath='', url='', urlAlt=''):
         self.title = title
         self.author = author
         self.authorBio = authorBio
@@ -86,6 +86,7 @@ class Article(object):
         self.category = category
         self.portraitPath = portraitPath
         self.url = url
+        self.urlAlt = urlAlt
 
     def addSub(self, sub):
         if sub not in self.subheadLines:
@@ -97,11 +98,11 @@ class Article(object):
 
     def addComm(self, comm):
         if comm not in self.comments:
-            self.subheadLines.append(comm)
+            self.comments.append(comm)
 
     def delComm(self, comm):
         if comm in self.comments:
-            self.subheadLines.remove(comm)
+            self.comments.remove(comm)
 
 class Issue(object):
 
@@ -127,6 +128,7 @@ def _isChinese(char):
     return 0x4e00 <= ord(char) < 0x9fa6
 
 def cleanText(inputText, patternBook=CLEANERBOOK):
+
     if len(inputText) <= 2:
         return inputText
 
@@ -136,7 +138,6 @@ def cleanText(inputText, patternBook=CLEANERBOOK):
         while string.find(text, key) != -1:
             text = string.replace(text, key, patternPair[1])
 
-    ## Kill spaces and blank lines at BOF and EOF
     text = text.strip(' \n')
 
     ## Delete unnecessary spaces
@@ -181,7 +182,7 @@ def _guessSubFromPlainText(plainText):
     subs = []
     lines = cleanText(plainText).split('\n')
 
-    # Include phase
+    ## Include phase
     lineNo = 2
     while lineNo < len(lines) - 2:
         L = len(lines[lineNo])
@@ -194,7 +195,7 @@ def _guessSubFromPlainText(plainText):
             subs.append(lines[lineNo])
         lineNo += 2  #Subheads should be scatterred.
 
-    # Exclude phase
+    ## Exclude phase
     subs = [s for s in subs if _subOK(s)]
 
     return subs
@@ -202,7 +203,6 @@ def _guessSubFromPlainText(plainText):
 def _guessMeta(htmlText, plainText):
 
     ## Guess title
-    # Extract what's between <title> and </title>
     titleStart = string.find(htmlText, '<title')
     titleEnd = string.find(htmlText, '</title>')
     leftTagEnd = string.find(htmlText, '>', titleStart)
@@ -213,6 +213,7 @@ def _guessMeta(htmlText, plainText):
         title = '*****'
 
     ## Guess author
+    # Guess from title in form of Author: Foo bar
     if ':' in title or u'：' in title:
         try:
             pos = title.index(':')
@@ -223,6 +224,8 @@ def _guessMeta(htmlText, plainText):
             title = title[pos+1:]
         else:
             author = ''
+
+    # Guess author from 'Author: Mr. Foobar' in text
     elif _markerPos(htmlText, AUTHORMARKERS) is not None:
         marker, pos = _markerPos(htmlText, AUTHORMARKERS)
         pos += len(marker)
@@ -231,6 +234,7 @@ def _guessMeta(htmlText, plainText):
         while htmlText[pos+L] not in TERMINATORS:
             L += 1
         author = htmlText[pos:pos+L]
+
     else:
         author = ''
 
@@ -279,7 +283,7 @@ def grab(url):
 
     """
     Input: a URL to a webpage
-    Output: the webpage, or an exception instance, if error occurs
+    Output: the webpage, or an exception instance, if error occurs.
     Automatically extract charset, if specified, and convert to UTF-8.
     Will autodetect if charset is not defined. When all other
     measures fail, assume UTF-8 and carry on.
@@ -318,15 +322,16 @@ def grab(url):
 
 
     #url = urlClean(url)        # the step moved to huozi.py
-    req = urllib2.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    userAgent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; Huozi)'
+    req = urllib2.Request(url, headers={'User-Agent': userAgent})
     opener = urllib2.build_opener(SmartRedirectHandler(),
                                   DefaultErrorHandler())
     try:
         html = opener.open(req).read()
     except urllib2.HTTPError:
-        return RuntimeError("Can't grab!")
+        raise RuntimeError("Connection fails!")
     except urllib2.URLError:
-        return RuntimeError("Bad URL!")
+        raise RuntimeError("Bad URL!")
 
     # Get encoding info, and decode accordingly.
     charset = ''
@@ -529,25 +534,26 @@ def readArgv(n):
 
 
 if __name__ == '__main__':
-    from random import randint
-    issue = Issue()
-    issue.grandTitle = u'大题'
-    issue.issueNum = str(randint(101, 500))
+    pass
+    #from random import randint
+    #issue = Issue()
+    #issue.grandTitle = u'大题'
+    #issue.issueNum = str(randint(101, 500))
 
-    article = Article()
-    article.title = u'我哈哈哈哈'
-    article.author = u'作者就是我'
-    article.authorBio = u'作者是个脑残'
-    article.url = urlClean(u'www.example.com')
-    article.text = u'正文正文正文'
-    issue.addArticle(article)
+    #article = Article()
+    #article.title = u'我哈哈哈哈'
+    #article.author = u'作者就是我'
+    #article.authorBio = u'作者是个脑残'
+    #article.url = urlClean(u'www.example.com')
+    #article.text = u'正文正文正文'
+    #issue.addArticle(article)
 
-    article2 = Article()
-    article2.title = u'我哈哈哈哈第二篇！'
-    article2.author = u'作者就是我'
-    article2.authorBio = u'作者是个脑残'
-    article2.url = urlClean(u'https://www.example.com')
-    article2.text = u'正文正文正文'
-    issue.addArticle(article2)
+    #article2 = Article()
+    #article2.title = u'我哈哈哈哈第二篇！'
+    #article2.author = u'作者就是我'
+    #article2.authorBio = u'作者是个脑残'
+    #article2.url = urlClean(u'https://www.example.com')
+    #article2.text = u'正文正文正文'
+    #issue.addArticle(article2)
 
-    createDoc(issue)
+    #createDoc(issue)
