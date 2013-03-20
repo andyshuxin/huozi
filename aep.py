@@ -1,19 +1,20 @@
 #coding=utf-8
 
-#AEP, Automatic E-magazine Processor, a set of modules that simulate
-#human action in fetching webpages, extracting main text and removing
-#unnecessary characters.
-#Currenly, the modules are customized for production of 1510 Weekly.
+# AEP, Automatic E-magazine Processor, a set of modules that simulate
+# human action in fetching webpages, extracting main text and removing
+# unnecessary characters.
+# Currenly, the modules are customized for production of 1510 Weekly.
 
-#Copyright (C) 2013 Shu Xin
+# Copyright (C) 2013 Shu Xin
 
-__VERSION__ = '0.02'
-__AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
-__COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
+__version__ = '0.03'
+__author__ = "Andy Shu Xin (andy@shux.in)"
+__copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
 
 
 ## Constants
+
 FONT = u'宋体'
 
 
@@ -30,14 +31,11 @@ try:
 except ImportError:
     hasPyWin = False
 
-
 try:
     import chardet
     hasChardet = True
 except ImportError:
     hasChardet = False
-
-
 
 #####  Constants  #####
 
@@ -51,7 +49,7 @@ MAXSUBLEN = 12        # Any line longer is assumed not subheadline
 SUBTHREDSOLD = 0.4    # How relatively short a line must be to be a sub
 
 CLEANERBOOK = (
-               (u'\u3000', ' '),          #"Ideographic" spaces
+               (u'\u3000', ' '),          #Ideographic spaces
                (u'\u00A0', ' '),          #&nbsp
                (u'　', ' '),              #Full-width spaces
                (u'\t', ' '),
@@ -76,11 +74,12 @@ PUNCTUATIONS = (',', '.', ':', ')', u'，', u'。', u'：', u'）')
 
 class Article(object):
 
-    def __init__(self, title='', author='', text='',
+    def __init__(self, title='', author='', authorBio='', text='',
                  subheadLines=[], comments=[], category = '',
                  portraitPath='', url=''):
         self.title = title
         self.author = author
+        self.authorBio = authorBio
         self.text = text
         self.subheadLines = subheadLines
         self.comments = comments
@@ -269,6 +268,13 @@ def parseHtml(htmlText):
     return (mainText, meta)
 
 #####  Grabber module  #####
+
+def urlClean(url):
+    url = url.encode('utf-8')
+    if url[:4] != 'http':
+        url = 'http://' + url
+    return url
+
 def grab(url):
 
     """
@@ -310,14 +316,8 @@ def grab(url):
         else:
            return False
 
-    def _urlClean(url):
-        res = url
-        if url[:4] != 'http':
-            res = 'http://' + url
-        return res
 
-    url = _urlClean(url)
-    url = url.encode('utf-8')   # In case it's a unicode URI
+    #url = urlClean(url)        # the step moved to huozi.py
     req = urllib2.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     opener = urllib2.build_opener(SmartRedirectHandler(),
                                   DefaultErrorHandler())
@@ -401,7 +401,6 @@ def createDoc(issue):
 
     # Foot notes
     font = doc.Styles(win32.constants.wdStyleQuote).Font
-    font.Bold = True
     font.Size = 10
     font.Name = FONT
 
@@ -458,7 +457,20 @@ def createDoc(issue):
             rng.InsertAfter(line+'\r\n')
             if line in article.subheadLines:
                 rng.Style = win32.constants.wdStyleHeading3
+        rng.Collapse( win32.constants.wdCollapseEnd )
 
+        # Author's Bio and original URL
+        rng.InsertAfter(u'（' +
+                        article.author + u'，' +
+                        article.authorBio + u'。' +
+                        u'原文链接：')
+        posA = rng.End
+        rng.InsertAfter(article.url)
+        posB = rng.End
+        rng.InsertAfter(u'）')
+        rngLink = doc.Range(posA, posB)
+        doc.Hyperlinks.Add(Anchor=rngLink, Address=article.url)
+        rng.Style = win32.constants.wdStyleQuote
         rng.Collapse( win32.constants.wdCollapseEnd )
         rng.InsertBreak( win32.constants.wdPageBreak )
 
@@ -484,7 +496,7 @@ def createDoc(issue):
     #word.Application.Quit()
 
 
-#####  File operation module  ####
+#####  File operation module  #####
 
 def readfile(filename):
     f = codecs.open(filename, 'r', 'utf-8')
@@ -516,3 +528,26 @@ def readArgv(n):
         return tuple(res) + (None,) * (n - len(res))
 
 
+if __name__ == '__main__':
+    from random import randint
+    issue = Issue()
+    issue.grandTitle = u'大题'
+    issue.issueNum = str(randint(101, 500))
+
+    article = Article()
+    article.title = u'我哈哈哈哈'
+    article.author = u'作者就是我'
+    article.authorBio = u'作者是个脑残'
+    article.url = urlClean(u'www.example.com')
+    article.text = u'正文正文正文'
+    issue.addArticle(article)
+
+    article2 = Article()
+    article2.title = u'我哈哈哈哈第二篇！'
+    article2.author = u'作者就是我'
+    article2.authorBio = u'作者是个脑残'
+    article2.url = urlClean(u'https://www.example.com')
+    article2.text = u'正文正文正文'
+    issue.addArticle(article2)
+
+    createDoc(issue)

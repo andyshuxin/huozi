@@ -32,16 +32,16 @@
 #   Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
 #   from The Noun Project
 
-__VERSION__ = 'M/S E'
-from aep import __VERSION__ as __AEPVERSION__
-__AUTHOR__ = "Andy Shu Xin (andy@shux.in)"
-__COPYRIGHT__ = "(C) 2013 Shu Xin. GNU GPL 3."
+__version__ = 'M/S F'
+from aep import __version__ as __AEPVERSION__
+__author__ = "Andy Shu Xin (andy@shux.in)"
+__copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
 import os
 import sys
 import wx
 from aep import Article, Issue
-from aep import grab, parseHtml, cleanText, createDoc
+from aep import grab, parseHtml, cleanText, createDoc, urlClean
 
 try:
     with open('DEBUG'): pass
@@ -69,6 +69,8 @@ txt = {
        'MdfCategoryQ':  "Name of the category:",
        'MdfAuthorT':    "Author",
        'MdfAuthorQ':    "What's the article's author?",
+       'MdfAuthorBioT': "Author Bio",
+       'MdfAuthorBioQ': "What's the introduction to the author?",
        'DelArticle':    "Delete ",
        'graberror':     "Something is wrong grabbing ",
        'graberrorCap':  "Grabber Error",
@@ -205,12 +207,23 @@ class MainFrame(wx.Frame):
         self.infoBar3 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
                                 style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+        self.infoBar4 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
+                                wx.DefaultPosition, wx.DefaultSize,
+                                style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+
         infoBarBox.Add(self.infoBar1, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
         infoBarBox.Add(self.infoBar2, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
-        infoBarBox.Add(self.infoBar3, 0, flag=wx.TOP|wx.LEFT|wx.BOTTOM|wx.EXPAND, border=5)
+        infoBarBox.Add(self.infoBar3, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
+        infoBarBox.Add(self.infoBar4, 0, flag=wx.TOP|wx.LEFT|wx.BOTTOM|wx.EXPAND, border=5)
+
         self.infoBar1.Bind(wx.EVT_LEFT_DOWN, self.OnConfigIssue)
         self.infoBar2.Bind(wx.EVT_LEFT_DOWN, self.OnModifyItemInfo)
         self.infoBar3.Bind(wx.EVT_LEFT_DOWN, self.OnModifyItemInfo)
+        self.infoBar4.Bind(wx.EVT_LEFT_DOWN, self.OnModifyItemInfo)
+
+        boldFont = wx.Font(11, wx.NORMAL, wx.NORMAL, wx.BOLD)
+        self.infoBar1.SetFont(boldFont)
+
         self.panelInfoBar.SetSizerAndFit(infoBarBox)
 
     def DrawArticleListAndButtons(self):
@@ -319,7 +332,7 @@ class MainFrame(wx.Frame):
 
         # Set up main frame
         self.SetSize((800, 600))
-        self.basicTitle = (u'活字 ' + __VERSION__ +
+        self.basicTitle = (u'活字 ' + __version__ +
                           ' (AEP: ' + __AEPVERSION__ + ')')
         self.SetTitle(self.basicTitle)
         self.Centre()
@@ -410,6 +423,7 @@ class MainFrame(wx.Frame):
                 continue
 
             try:
+                url = urlClean(url)
                 htmlText = grab(url)
                 if isinstance(htmlText, Exception):
                     raise htmlText
@@ -550,14 +564,14 @@ class MainFrame(wx.Frame):
 
     def OnModifyItemInfo(self, e):
         itemIndex = self.articleList.GetSelection()
-        if self.articleList.GetStringSelection()[0] == u'【':
+        if self.articleList.GetStringSelection()[0] == u'【':   # item is category
             cat = self.askInfo(txt['MdfCategoryQ'], txt['MdfCategoryT'],
                                self.articleList.GetStringSelection()[1:-1],
                                False, True)
             cat = u'【' + cat + u'】'
             if cat is not None:
                 self.articleList.SetString(itemIndex, cat)
-        else:
+        else:       #item is article
             if itemIndex == -1:
                 return
             selectedArticle = self.getSelectedArticle()
@@ -567,10 +581,15 @@ class MainFrame(wx.Frame):
             author = self.askInfo(txt['MdfAuthorQ'], txt['MdfAuthorT'],
                                   selectedArticle.author,
                                   False, True)
+            authorBio = self.askInfo(txt['MdfAuthorBioQ'], txt['MdfAuthorBioT'],
+                                     selectedArticle.authorBio,
+                                     False, True)
             if title is not None:
                 selectedArticle.title = title
             if author is not None:
                 selectedArticle.author = author
+            if authorBio is not None:
+                selectedArticle.authorBio = authorBio
 
             self.articleList.SetString(itemIndex, selectedArticle.title)
             self.updateInfoBar(itemIndex)
@@ -716,6 +735,7 @@ class MainFrame(wx.Frame):
         if index == -1:
             self.infoBar2.SetLabel('')
             self.infoBar3.SetLabel('')
+            self.infoBar4.SetLabel('')
             return
         selectedTitle = self.articleList.GetString(index)
         if selectedTitle[0] == u'【':
@@ -726,8 +746,10 @@ class MainFrame(wx.Frame):
                 return
         title = selectedArticle.title
         author = selectedArticle.author
-        self.infoBar2.SetLabel('Article title: ' + title)
-        self.infoBar3.SetLabel('Author: ' + author)
+        authorBio = selectedArticle.authorBio
+        self.infoBar2.SetLabel("Article title: " + title)
+        self.infoBar3.SetLabel("Author: " + author)
+        self.infoBar4.SetLabel("Author's bio: " + authorBio)
 
     def updateTextBox(self):
 
