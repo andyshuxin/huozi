@@ -89,6 +89,7 @@ txt = {
 
 #####  UI  #####
 
+
 class EmptyContentError(Exception):
     def __init__(self, url):
         self.text = txt['emptyContent']
@@ -482,7 +483,7 @@ class MainFrame(wx.Frame):
         cat = u'【' + cat + u'】'
         pos = self.articleList.GetSelection()
         if pos == -1:
-            self.articleList.Append(cat)
+            self.articleList.Insert(cat, 0)
         else:
             self.articleList.Insert(cat, pos+1)
         self.updateCatInfo()
@@ -507,8 +508,8 @@ class MainFrame(wx.Frame):
                 self.btnUp.Enable(False)
 
         # Swap storage order
-        if not (selectedTitle.startswith(u'【') or
-                swappedTitle.startswith(u'【')):
+        if not (_isCat(selectedTitle) or
+                _isCat(swappedTitle)):
             for article in self.issue:
                 if article.title == selectedTitle:
                     articleNumA = self.issue.articleList.index(article)
@@ -543,8 +544,8 @@ class MainFrame(wx.Frame):
                 self.btnDn.Enable(False)
 
         # Swap storage order
-        if not (selectedTitle.startswith(u'【') or
-                swappedTitle.startswith(u'【')):
+        if not (_isCat(selectedTitle) or
+                _isCat(swappedTitle)):
             for article in self.issue:
                 if article.title == selectedTitle:
                     articleNumA = self.issue.articleList.index(article)
@@ -600,7 +601,7 @@ class MainFrame(wx.Frame):
         itemIndex = self.articleList.GetSelection()
         selectedTitle = self.articleList.GetString(itemIndex)
 
-        if not selectedTitle.startswith(u'【'):
+        if not _isCat(selectedTitle):
             dlgYesNo = wx.MessageDialog(None, txt['DelArticle']+selectedTitle+" ?", style=wx.YES|wx.NO)
             if dlgYesNo.ShowModal() != wx.ID_YES:
                 return
@@ -670,7 +671,7 @@ class MainFrame(wx.Frame):
             self.btnUp.Enable(False)
         if e.GetSelection() == self.articleList.GetCount() - 1:
             self.btnDn.Enable(False)
-        if e.GetString().startswith(u'【'):
+        if _isCat(e.GetString()):
             self.btnEdit.Enable(False)
         self.updateInfoBar(e.GetSelection())
         self.updateTextBox()
@@ -775,11 +776,12 @@ class MainFrame(wx.Frame):
             rightMargin = leftMargin + len(subhead)
             self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
 
+
     def updateCatInfo(self):
         cat = ''
         for i in range(0, self.articleList.GetCount()):
             s = self.articleList.GetString(i)
-            if s.startswith(u'【'):
+            if _isCat(s):
                 cat = s[1:-1]
             else:
                 for article in self.issue.articleList:
@@ -827,6 +829,8 @@ class MainFrame(wx.Frame):
             print article.subheadLines
             print article.category
 
+def _isCat(title):
+    return title.startswith(u'【')
 
 def _main():
     currentIssue = Issue()
