@@ -147,7 +147,7 @@ def cleanText(inputText, patternBook=CLEANERBOOK):
             if _isChinese(text[i-1]) or _isChinese(text[i+1]):
                 text = text[:i] + text[i+1:]
                 i -= 1
-            elif (text[i-1] == ' ') or (text[i+1] == ' '):
+            elif text[i+1] == ' ':
                 text = text[:i] + text[i+1:]
                 i -= 1
         i += 1
@@ -246,7 +246,7 @@ def _guessMeta(htmlText, plainText):
 
     return (cleanText(title), cleanText(author), subs)
 
-def parseHtml(htmlText):
+def analyseHTML(htmlText):
 
     """
     Input: htmlText, a string, which is a html file
@@ -361,7 +361,7 @@ def createDoc(issue):
 
     word = win32.gencache.EnsureDispatch('Word.Application')
     #doc = word.Documents.Add()
-    doc = word.Documents.Open(os.getcwd() + '\\template.doc')
+    doc = word.Documents.Open(os.getcwd() + r'\template.doc')
 
     ##### Set up styles #####
 
@@ -457,7 +457,7 @@ def createDoc(issue):
         rng.Collapse( win32.constants.wdCollapseEnd )
 
         # Main text
-        for line in article.text.split('\n'):
+        for line in article.text.splitlines():
             rng.Collapse( win32.constants.wdCollapseEnd )
             rng.InsertAfter(line+'\r\n')
             if line in article.subheadLines:
@@ -479,12 +479,7 @@ def createDoc(issue):
         rng.Collapse( win32.constants.wdCollapseEnd )
         rng.InsertBreak( win32.constants.wdPageBreak )
 
-    ## Extra infomation -> embeded in template.doc
-    #infodoc = word.Documents.Open(os.getcwd() + '\\extrainfo.doc')
-    #rng2 = infodoc.Range()
-    #rng2.Copy()
-    #rng.Paste()
-    #infodoc.Close(False)
+    ## Extra infomation embeded in template.doc
 
     # Add TOC
     doc.TablesOfContents.Add(doc.Range(tocPos, tocPos), True, 1, 2)

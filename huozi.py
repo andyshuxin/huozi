@@ -41,7 +41,7 @@ import os
 import sys
 import wx
 from aep import Article, Issue
-from aep import grab, parseHtml, cleanText, createDoc, urlClean
+from aep import grab, analyseHTML, cleanText, createDoc, urlClean
 
 try:
     with open('DEBUG'): pass
@@ -426,11 +426,11 @@ class MainFrame(wx.Frame):
 
             try:
                 htmlText = grab(url)
-                parsed = parseHtml(htmlText)
-                mainText = cleanText(parsed[0])
+                analysis = analyseHTML(htmlText)
+                mainText = cleanText(analysis[0])
                 if len(mainText) <= 1:
                     raise EmptyContentError(url)
-                meta = parsed[1]
+                meta = analysis[1]
                 currentArticle = Article(title=meta['title'], author=meta['author'],
                                          text=mainText, subheadLines=meta['sub'], url=url)
                 self.issue.addArticle(currentArticle)
