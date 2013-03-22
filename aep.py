@@ -348,103 +348,83 @@ def grab(url):
             charset = chardet.detect(html)['encoding']
         else:
             charset = 'utf-8'
-    finally:
-        charset = 'gbk' if charset == 'gb2312' else charset
-        charset = 'big5-hkscs' if charset == 'big5' else charset
-        charset = 'utf-8' if (charset is None) or (charset == '') else charset
-        html = html.decode(charset, 'ignore')
-        return html
+    charset = 'gbk' if charset == 'gb2312' else charset
+    charset = 'big5hkscs' if charset == 'big5' else charset
+    charset = 'utf-8' if (charset is None) or (charset == '') else charset
+    html = html.decode(charset, 'ignore')
+    return html
 
 
 ##### MS Word Export module #####
 def createDoc(issue):
 
     word = win32.gencache.EnsureDispatch('Word.Application')
-    #doc = word.Documents.Add()
-    doc = word.Documents.Open(os.getcwd() + r'\template.doc')
+    doc = word.Documents.Open(os.getcwd() + r'\template.dot')
 
-    ##### Set up styles #####
+    ###### Set up styles #####
 
-    # Normal Text 
-    font = doc.Styles(win32.constants.wdStyleNormal).Font
-    font.Size = 11
-    font.Name = FONT
-    paraF = doc.Styles(win32.constants.wdStyleNormal).ParagraphFormat
-    paraF.LineSpacingRule = win32.constants.wdLineSpace1pt5
-    paraF.CharacterUnitFirstLineIndent = 2
+    ## Normal Text 
+    #font = doc.Styles(win32.constants.wdStyleNormal).Font
+    #font.Size = 11
+    #font.Name = FONT
+    #paraF = doc.Styles(win32.constants.wdStyleNormal).ParagraphFormat
+    #paraF.LineSpacingRule = win32.constants.wdLineSpace1pt5
+    #paraF.CharacterUnitFirstLineIndent = 2
 
-    # Heading 1
-    font = doc.Styles(win32.constants.wdStyleHeading1).Font
-    font.Bold = True
-    font.Size = 24
-    font.Name = FONT
-    paraF = doc.Styles(win32.constants.wdStyleHeading1).ParagraphFormat
-    paraF.Alignment = win32.constants.wdAlignParagraphLeft
-    paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
-    paraF.CharacterUnitFirstLineIndent = 0
+    ## Heading 1
+    #font = doc.Styles(win32.constants.wdStyleHeading1).Font
+    #font.Bold = True
+    #font.Size = 24
+    #font.Name = FONT
+    #paraF = doc.Styles(win32.constants.wdStyleHeading1).ParagraphFormat
+    #paraF.Alignment = win32.constants.wdAlignParagraphLeft
+    #paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
+    #paraF.CharacterUnitFirstLineIndent = 0
 
-    # Heading 2
-    font = doc.Styles(win32.constants.wdStyleHeading2).Font
-    font.Bold = True
-    font.Size = 18
-    font.Name = FONT
-    paraF = doc.Styles(win32.constants.wdStyleHeading2).ParagraphFormat
-    paraF.Alignment = win32.constants.wdAlignParagraphCenter
-    paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
-    paraF.CharacterUnitFirstLineIndent = 0
+    ## Heading 2
+    #font = doc.Styles(win32.constants.wdStyleHeading2).Font
+    #font.Bold = True
+    #font.Size = 18
+    #font.Name = FONT
+    #paraF = doc.Styles(win32.constants.wdStyleHeading2).ParagraphFormat
+    #paraF.Alignment = win32.constants.wdAlignParagraphCenter
+    #paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
+    #paraF.CharacterUnitFirstLineIndent = 0
 
-    # Subheads
-    font = doc.Styles(win32.constants.wdStyleHeading3).Font
-    font.Bold = True
-    font.Italic = False
-    font.Size = 11
-    font.Name = FONT
-    paraF = doc.Styles(win32.constants.wdStyleHeading3).ParagraphFormat
-    paraF.Alignment = win32.constants.wdAlignParagraphCenter
-    paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
-    paraF.CharacterUnitFirstLineIndent = 0
+    ## Subheads
+    #font = doc.Styles(win32.constants.wdStyleHeading3).Font
+    #font.Bold = True
+    #font.Italic = False
+    #font.Size = 11
+    #font.Name = FONT
+    #paraF = doc.Styles(win32.constants.wdStyleHeading3).ParagraphFormat
+    #paraF.Alignment = win32.constants.wdAlignParagraphCenter
+    #paraF.LineSpacingRule = win32.constants.wdLineSpaceDouble
+    #paraF.CharacterUnitFirstLineIndent = 0
 
-    # Foot notes
-    font = doc.Styles(win32.constants.wdStyleQuote).Font
-    font.Size = 10
-    font.Name = FONT
-
+    ## Foot notes
+    #font = doc.Styles(win32.constants.wdStyleQuote).Font
+    #font.Size = 10
+    #font.Name = FONT
 
     ##### Add contents #####
 
-    ## Add Header
+    ## Set Header
     C = win32.constants.wdHeaderFooterPrimary
     fullTitle = u'一五一十周刊第' + issue.issueNum + u'期' + \
                 u'：' + issue.grandTitle
-    doc.Sections(1).Headers(C).Range.InsertAfter(fullTitle+'\r\n')
-
-    ## Footer requires no additional actions.  ##
-
-    rng = doc.Range(0, 0)
-
-    ## Add Cover page
-    rng.InsertAfter(u'【封面圖片】\r\n')
-    rng.Collapse( win32.constants.wdCollapseEnd )
-    rng.InsertBreak( win32.constants.wdPageBreak )
-
-    ## Add Editor's Remark
-    rng.InsertAfter(u'【编者的话】\r\n')
-    rng.InsertAfter(issue.ediRemark)
-    rng.Collapse( win32.constants.wdCollapseEnd )
-    rng.InsertBreak( win32.constants.wdPageBreak )
-
-    ## Add Contents Page
-    rng.InsertAfter(u'目录\r\n')
-    rng.Collapse( win32.constants.wdCollapseEnd )
-    tocPos = rng.End
-    rng.InsertBreak( win32.constants.wdPageBreak )
+    doc.Sections(1).Headers(C).Range.InsertAfter(fullTitle + '\r\n'*2)
+    doc.Sections(1).PageSetup.DifferentFirstPageHeaderFooter = True
+    doc.Sections(3).Headers(C).Range.InsertAfter(fullTitle + '\r\n'*2)
 
     ## Add articles
+    rng = doc.Content
+    rng.Find.Execute(FindText='[ARTICLES]', ReplaceWith='')
     rng.Collapse( win32.constants.wdCollapseEnd )
     category = ''
     for article in issue.articleList:
 
-        # Category
+        # Category name, if any
         if article.category != category:
             category = article.category
             rng.InsertAfter(u'【' + category + u'】' + '\r\n')
@@ -455,6 +435,21 @@ def createDoc(issue):
         rng.InsertAfter(article.author + u'：' + article.title + '\r\n')
         rng.Style = win32.constants.wdStyleHeading2
         rng.Collapse( win32.constants.wdCollapseEnd )
+
+        # Portrait, if any
+        anchor = rng
+        if article.portraitPath:
+            doc.Shapes.AddPicture(FileName=article.portraitPath,
+                                  LinkToFile=False,
+                                  SaveWithDocument=True,
+                                  Left=-180,
+                                  Width=180, Height=180,
+                                  Anchor=anchor)
+
+            #doc.InlineShapes.AddPicture(FileName=article.portraitPath,
+                                  #LinkToFile=False,
+                                  #SaveWithDocument=True,
+                                  #Range=rng)
 
         # Main text
         for line in article.text.splitlines():
@@ -479,15 +474,20 @@ def createDoc(issue):
         rng.Collapse( win32.constants.wdCollapseEnd )
         rng.InsertBreak( win32.constants.wdPageBreak )
 
-    ## Extra infomation embeded in template.doc
+    ## Cover page
+    rng = doc.Content
+    rng.Find.Execute(FindText='[COVERIMAGE]', ReplaceWith='')
+    #TODO
 
-    # Add TOC
-    doc.TablesOfContents.Add(doc.Range(tocPos, tocPos), True, 1, 2)
-    #doc.TablesOfContents(1).Update()
+    ## Editor's Remarks
+    rng = doc.Content
+    rng.Find.Execute(FindText='[EDITORREMARK]', ReplaceWith='')
+    rng.InsertAfter(issue.ediRemark)
 
-    # Unify font, just in case
-    rng = doc.Range()
-    rng.Font.Name = FONT
+    ### Table of Contents
+    rng = doc.Content
+    rng.Find.Execute(FindText='[TOC]', ReplaceWith='')
+    doc.TablesOfContents.Add(doc.Range(rng.End, rng.End), True, 1, 2)
 
     # Finalizing
     doc.SaveAs(FileName=os.getcwd() + '\\' + fullTitle,
@@ -529,26 +529,25 @@ def readArgv(n):
 
 
 if __name__ == '__main__':
-    pass
-    #from random import randint
-    #issue = Issue()
-    #issue.grandTitle = u'大题'
-    #issue.issueNum = str(randint(101, 500))
+    from random import randint
+    issue = Issue()
+    issue.grandTitle = u'大题'
+    issue.issueNum = str(randint(101, 500))
+    issue.ediRemark = u'编者的话' * 30 + '\r\n' + u'第二段' * 30
 
-    #article = Article()
-    #article.title = u'我哈哈哈哈'
-    #article.author = u'作者就是我'
-    #article.authorBio = u'作者是个脑残'
-    #article.url = urlClean(u'www.example.com')
-    #article.text = u'正文正文正文'
-    #issue.addArticle(article)
+    article = Article()
+    article.title = u'第一篇'
+    article.author = u'作者'
+    article.url = 'renren.com'
+    article.text = u'正文正文正文' * 80 + '\r\n' + u'田'*30
+    article.portraitPath = r'C:\Documents and Settings\All Users\Documents\My Pictures\Sample Pictures\Winter.jpg'
+    issue.addArticle(article)
 
-    #article2 = Article()
-    #article2.title = u'我哈哈哈哈第二篇！'
-    #article2.author = u'作者就是我'
-    #article2.authorBio = u'作者是个脑残'
-    #article2.url = urlClean(u'https://www.example.com')
-    #article2.text = u'正文正文正文'
-    #issue.addArticle(article2)
+    article2 = Article()
+    article2.title = u'第二篇！'
+    article2.author = u'作者'
+    article2.url = 'google.com'
+    article2.text = u'正文正文正文' * 100
+    issue.addArticle(article2)
 
-    #createDoc(issue)
+    createDoc(issue)

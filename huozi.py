@@ -71,6 +71,7 @@ txt = {
        'MdfAuthorQ':    "What's the article's author?",
        'MdfAuthorBioT': "Author Bio",
        'MdfAuthorBioQ': "What's the introduction to the author?",
+       'PortraitT':     "Select Portrait File for the Author.",
        'DelArticle':    "Delete ",
        'graberror':     "Something is wrong grabbing ",
        'graberrorCap':  "Grabber Error",
@@ -90,11 +91,6 @@ txt = {
 #####  UI  #####
 
 
-class EmptyContentError(Exception):
-    def __init__(self, url):
-        self.text = txt['emptyContent']
-    def __str__(self):
-        return self.text
 
 class MainFrame(wx.Frame):
 
@@ -429,22 +425,12 @@ class MainFrame(wx.Frame):
                 analysis = analyseHTML(htmlText)
                 mainText = cleanText(analysis[0])
                 if len(mainText) <= 1:
-                    raise EmptyContentError(url)
+                    raise RuntimeError("Can't extract content!")
                 meta = analysis[1]
                 currentArticle = Article(title=meta['title'], author=meta['author'],
                                          text=mainText, subheadLines=meta['sub'], url=url)
                 self.issue.addArticle(currentArticle)
                 articlesToUpdate.append(currentArticle)
-
-
-            except EmptyContentError, err:
-                dlg = wx.MessageDialog(self.panel,
-                                       txt['graberror']+ url +': '+str(err),
-                                       txt['graberrorCap'],
-                                       wx.OK|wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                dlg.Destroy()
-                continue
 
             except (TypeError, RuntimeError) as err:
                 dlg = wx.MessageDialog(self.panel,
@@ -477,7 +463,7 @@ class MainFrame(wx.Frame):
         if cat is None:
             return
 
-        #Update articleList box
+        # Update articleList box
         cat = u'【' + cat + u'】'
         pos = self.articleList.GetSelection()
         if pos == -1:
@@ -563,32 +549,42 @@ class MainFrame(wx.Frame):
 
     def OnModifyItemInfo(self, e):
         itemIndex = self.articleList.GetSelection()
-        if self.articleList.GetStringSelection()[0] == u'【':   # item is category
+        if _isCat(self.articleList.GetStringSelection()):
             cat = self.askInfo(txt['MdfCategoryQ'], txt['MdfCategoryT'],
                                self.articleList.GetStringSelection()[1:-1],
                                False, True)
             cat = u'【' + cat + u'】'
             if cat is not None:
                 self.articleList.SetString(itemIndex, cat)
-        else:       #item is article
+        else:
             if itemIndex == -1:
                 return
             selectedArticle = self.getSelectedArticle()
             title = self.askInfo(txt['MdfTitleQ'], txt['MdfTitleT'],
                                  selectedArticle.title,
-                                 False, True)
+                                 noCancel=True)
             author = self.askInfo(txt['MdfAuthorQ'], txt['MdfAuthorT'],
                                   selectedArticle.author,
-                                  False, True)
+                                  noCancel=True)
             authorBio = self.askInfo(txt['MdfAuthorBioQ'], txt['MdfAuthorBioT'],
                                      selectedArticle.authorBio,
-                                     False, True)
+                                     noCancel=True)
+            dlgPortrait = wx.FileDialog(None, message=txt['PortraitT'],
+                wildcard="Images|*.jpeg;*.png;*.bmp")
+            if dlgPortrait.ShowModal() == wx.ID_OK:
+                portraitPath = dlgPortrait.GetPath()
+                dlgPortrait.Destroy()
+            else:
+                portraitPath = None
+
             if title is not None:
                 selectedArticle.title = title
             if author is not None:
                 selectedArticle.author = author
             if authorBio is not None:
                 selectedArticle.authorBio = authorBio
+            if portraitPath is not None:
+                selectedArticle.portraitPath = portraitPath
 
             self.articleList.SetString(itemIndex, selectedArticle.title)
             self.updateInfoBar(itemIndex)
@@ -826,6 +822,7 @@ class MainFrame(wx.Frame):
             print article.title
             print article.subheadLines
             print article.category
+            print article.portraitPath
 
 def _isCat(title):
     return title.startswith(u'【')
