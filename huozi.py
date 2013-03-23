@@ -31,6 +31,9 @@
 #   Downloaded from http://thenounproject.com/noun/keyboard/#icon-No3041
 #   Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
 #   from The Noun Project
+# Template.dot:
+#   Layout designed by Pan Wenyi, Co-China Forum. Text by Co-China Forum.
+#   Copyrighted and not distributed under GPL.
 
 __version__ = 'M/S F'
 from aep import __version__ as __AEPVERSION__
@@ -570,7 +573,7 @@ class MainFrame(wx.Frame):
                                      selectedArticle.authorBio,
                                      noCancel=True)
             dlgPortrait = wx.FileDialog(None, message=txt['PortraitT'],
-                wildcard="Images|*.jpeg;*.png;*.bmp")
+                wildcard="Images|*.jpg;*.jpeg;*.gif;*.png;*.bmp")
             if dlgPortrait.ShowModal() == wx.ID_OK:
                 portraitPath = dlgPortrait.GetPath()
                 dlgPortrait.Destroy()
