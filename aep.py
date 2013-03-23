@@ -17,7 +17,6 @@ __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
 import sys
 import os
-import codecs
 import string
 import urllib2
 from PIL import Image
@@ -134,9 +133,8 @@ def cleanText(inputText, patternBook=CLEANERBOOK):
     text = inputText
     for patternPair in patternBook:
         key = patternPair[0]
-        #while string.find(text, key) != -1:
         while key in text:
-            text = string.replace(text, key, patternPair[1])
+            text = text.replace(key, patternPair[1])
 
     text = text.strip(' \n')
 
@@ -154,7 +152,7 @@ def cleanText(inputText, patternBook=CLEANERBOOK):
 
     return text
 
-#####  Parser Module  #####
+#####  HTML Analyser Module  #####
 
 def _markerPos(html, markers):
     for marker in markers:
@@ -203,9 +201,9 @@ def _guessSubFromPlainText(plainText):
 def _guessMeta(htmlText, plainText):
 
     ## Guess title
-    titleStart = string.find(htmlText, '<title')
-    titleEnd = string.find(htmlText, '</title>')
-    leftTagEnd = string.find(htmlText, '>', titleStart)
+    titleStart = htmlText.find('<title')
+    titleEnd = htmlText.find('</title>')
+    leftTagEnd = htmlText.find('>', titleStart)
     if leftTagEnd+1 <= titleEnd:
         title = htmlText[leftTagEnd+1:titleEnd]
     else:
@@ -213,7 +211,8 @@ def _guessMeta(htmlText, plainText):
         title = '*****'
 
     ## Guess author
-    # Guess from title in form of Author: Foo bar
+
+    # Guess from title in form of <Author: Foo bar>
     if ':' in title or u'：' in title:
         try:
             pos = title.index(':')
@@ -225,7 +224,7 @@ def _guessMeta(htmlText, plainText):
         else:
             author = ''
 
-    # Guess author from 'Author: Mr. Foobar' in text
+    # Guess author from <Author: Mr. Foobar> in text
     elif _markerPos(htmlText, AUTHORMARKERS) is not None:
         marker, pos = _markerPos(htmlText, AUTHORMARKERS)
         pos += len(marker)
@@ -263,11 +262,10 @@ def analyseHTML(htmlText):
     mainText = get_text(mainText)
 
     meta = _guessMeta(htmlText, mainText)
-    meta = {
-            'title':  meta[0],
+    meta = {'title':  meta[0],
             'author': meta[1],
             'sub':    meta[2],
-            }
+           }
 
     return (mainText, meta)
 
@@ -354,7 +352,7 @@ def grab(url):
     html = html.decode(charset, 'ignore')
     return html
 
-##### MS Word Export module #####
+##### .doc Export module #####
 
 def createDoc(issue):
 
@@ -373,7 +371,7 @@ def createDoc(issue):
     rng.Find.Execute(FindText='[EDITORREMARK]', ReplaceWith='')
     rng.InsertAfter(issue.ediRemark)
 
-    ## Set Header
+    ## Header
     today = date.today()
     for offset in range(7):
         pubDay = today + timedelta(days=offset)
@@ -494,76 +492,11 @@ def createDoc(issue):
     doc.TablesOfContents.Add(doc.Range(rng.End, rng.End), True, 1, 2)
 
     # Finalizing
-    doc.SaveAs(FileName=os.getcwd() + '\\' + fullTitle,
+    doc.SaveAs(FileName=(os.getcwd() + '\\' + fullTitle),
                FileFormat=win32.constants.wdFormatDocument)
     word.Visible = True
     #word.Application.Quit()
 
-
-#####  File operation module  #####
-
-def readfile(filename):
-    f = codecs.open(filename, 'r', 'utf-8')
-    text = f.read()
-    f.close()
-    return text
-
-def writefile(filename, content):
-    f = codecs.open(filename, 'w', 'utf-8')
-    f.write(content)
-    f.close()
-
-def readArgv(n):
-
-    '''
-    n: number arguments expected to be returned
-    Return: a tuple of n length consisting of arguments,
-    if argument is inadequate, use None to fill in.
-    '''
-
-    res = []
-    for i in range(1, len(sys.argv)):
-        res.append(sys.argv[i])
-    if len(res) > n:
-        return res[:n]
-    elif len(res) == n:
-        return tuple(res)
-    else:
-        return tuple(res) + (None,) * (n - len(res))
-
-
 if __name__ == '__main__':
-    from random import randint
-    issue = Issue()
-    issue.grandTitle = u'大题'
-    issue.issueNum = str(randint(101, 500))
-    issue.ediRemark = u'编者的话' * 30 + '\r\n' + u'第二段' * 30
-
-    article = Article()
-    article.title = u'第一篇'
-    article.author = u'作者'
-    article.authorBio = u'牛逼的人1'
-    article.url = 'renren.com'
-    article.text = u'正文正文正文' * 80 + '\r\n' + u'田'*30
-    article.portraitPath = r'C:\Documents and Settings\All Users\Documents\My Pictures\Sample Pictures\Winter.jpg'
-    for i in range(20):
-        issue.addArticle(article)
-
-    article2 = Article()
-    article2.title = u'第二篇！'
-    article2.author = u'作者'
-    article2.authorBio = u'牛逼的人2'
-    article2.url = 'google.com'
-    article2.portraitPath = r'C:\Documents and Settings\All Users\Documents\My Pictures\Sample Pictures\Sunset.jpg'
-    article2.text = u'正文正文正文' * 100
-    issue.addArticle(article2)
-
-    article3 = Article()
-    article3.title = u'第三篇！'
-    article3.author = u'作者'
-    article3.authorBio = u'牛逼的人3'
-    article3.url = 'google.com'
-    article3.text = u'正文正文正文' * 100
-    issue.addArticle(article3)
-
-    createDoc(issue)
+    from test import test
+    test()

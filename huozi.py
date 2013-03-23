@@ -93,7 +93,8 @@ txt = {
 
 #####  UI  #####
 
-
+ATTR_NORMAL = wx.TextAttr("black", "white")
+ATTR_HIGHLIGHT = wx.TextAttr('black', 'yellow')
 
 class MainFrame(wx.Frame):
 
@@ -103,11 +104,11 @@ class MainFrame(wx.Frame):
 
     def __init__(self, currentIssue, *args, **kwargs):
         super(MainFrame, self).__init__(*args, **kwargs)
-        self.issue = currentIssue   #issue of magazine
+        self.issue = currentIssue
         self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
         self.DrawUI()
 
-    def DrawPanel(self):
+    def DrawPanels(self):
         self.panel = wx.Panel(self, wx.ID_ANY)
         self.panelInfoBar = wx.Panel(self.panel, wx.ID_ANY, style=wx.SUNKEN_BORDER)
         self.panelInfoBar.SetBackgroundColour(wx.Colour(202, 237, 218))
@@ -318,7 +319,7 @@ class MainFrame(wx.Frame):
     def DrawUI(self):
 
         # Add components
-        self.DrawPanel()
+        self.DrawPanels()
         self.DrawBoxSizers()
         self.DrawMainToolbar()
         self.DrawInfoBars()
@@ -702,7 +703,7 @@ class MainFrame(wx.Frame):
         if line in article.subheadLines:
             #UI action: dehighlight the line
             self.textBox.SetStyle(leftMargin, rightMargin,
-                                  wx.TextAttr("black", "white"))
+                                  ATTR_NORMAL)
 
             #Backend action: remove subhead info 
             article.subheadLines.remove(line)
@@ -711,7 +712,7 @@ class MainFrame(wx.Frame):
         else:
             #UI action: highlight the line
             self.textBox.SetStyle(leftMargin, rightMargin,
-                                  wx.TextAttr('black', 'yellow'))
+                                  ATTR_HIGHLIGHT)
             #Backend action: add subhead info 
             article.subheadLines.append(line)
 
@@ -723,21 +724,20 @@ class MainFrame(wx.Frame):
 
     def updateInfoBar(self, index):
 
-        issueInfo = (
-                    txt['issueNo'] + str(self.issue.issueNum) + ' ' +
-                    self.issue.grandTitle + ' ' +
-                    txt['articleNo'] + str(len(self.issue.articleList))
+        # Issue info
+        issueInfo = (txt['issueNo'] + str(self.issue.issueNum) + ' ' +
+                     self.issue.grandTitle + ' ' +
+                     txt['articleNo'] + str(len(self.issue.articleList))
                     )
         self.infoBar1.SetLabel(issueInfo)
 
-        if index == -1:
+        # Article info
+        if index == -1 or _isCat(self.articleList.GetString(index)):
             self.infoBar2.SetLabel('')
             self.infoBar3.SetLabel('')
             self.infoBar4.SetLabel('')
             return
-        selectedTitle = self.articleList.GetString(index)
-        if selectedTitle[0] == u'【':
-            return
+
         selectedArticle = self.getSelectedArticle()
         if os.name == 'nt':
             if selectedArticle is None:
@@ -751,41 +751,44 @@ class MainFrame(wx.Frame):
 
     def updateTextBox(self):
 
-        if ((self.articleList.GetSelection() == -1) or
-            (self.articleList.GetStringSelection()[0] == u'【')):
+        if self.articleList.GetSelection() == -1:
             return
+        elif _isCat(self.articleList.GetStringSelection()):
+            self.textBox.SetValue('')
+            return
+
         index = self.articleList.GetSelection()
 
-        title = self.articleList.GetStringSelection()
-        #TODO replace with getSelectedArticle()
-        for article in self.issue:
-            if article.title == title:
-                text = article.text
-                break
-        self.textBox.SetValue(text)
+        selectedArticle = self.getSelectedArticle()
+        self.textBox.SetValue(selectedArticle.text)
 
         selectedTitle = self.articleList.GetString(index)
-        selectedArticle = self.getSelectedArticle()
 
+        # Hilight subs
         text = self.textBox.GetValue()
         for subhead in selectedArticle.subheadLines:
             leftMargin = text.find(subhead)
             rightMargin = leftMargin + len(subhead)
-            self.textBox.SetStyle(leftMargin, rightMargin, wx.TextAttr('black', 'yellow'))
+            # Duct tape for text similar to one of the subs
+            while (text[leftMargin-1] != '\n' or
+                   text[rightMargin] != '\n'):    # part of a paragraph
+                leftMargin = text.find(subhead, rightMargin)
+                rightMargin = leftMargin + len(subhead)
+            # End duct tape
+            self.textBox.SetStyle(leftMargin, rightMargin, ATTR_HIGHLIGHT)
 
 
     def updateCatInfo(self):
         cat = ''
         for i in range(0, self.articleList.GetCount()):
-            s = self.articleList.GetString(i)
+            item = self.articleList.GetString(i)
             if _isCat(s):
-                cat = s[1:-1]
+                cat = item[1:-1]
             else:
                 for article in self.issue.articleList:
-                    if article.title == s:
+                    if article.title == item:
                         break
                 article.category = cat
-        pass
 
     def askInfo(self, prompt, dialogTitle, defaultVal='', multiline=False, noCancel=False):
 
@@ -823,12 +826,14 @@ class MainFrame(wx.Frame):
         print self.issue.ediRemark
         for article in self.issue:
             print article.title
-            print article.subheadLines
+            for sub in article.subheadLines:
+                print sub.encode('utf-8')
             print article.category
             print article.portraitPath
+            print article.text
 
 def _isCat(title):
-    return title.startswith(u'【')
+    return title.startswith(u'【') and title.endswith(u'】')
 
 def _main():
     currentIssue = Issue()
