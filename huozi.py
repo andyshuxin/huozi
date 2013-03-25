@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 #coding=utf-8
 
 # Copyright (C) 2013 Shu Xin
@@ -35,16 +35,18 @@
 #   Layout designed by Pan Wenyi, Co-China Forum. Text by Co-China Forum.
 #   Copyrighted and not distributed under GPL.
 
-__version__ = 'M/S F'
-from aep import __version__ as __AEPVERSION__
+__version__ = 'M/S G'
+from aep import __version__ as __aepversion__
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
 import os
 import sys
 import wx
-from aep import Article, Issue
-from aep import grab, analyseHTML, cleanText, createDoc, urlClean
+from aep import (Article, Issue,
+                 urlClean, grab, analyseHTML, cleanText, createDoc,
+                 BRA_L, BRA_R
+                )
 
 try:
     with open('DEBUG'): pass
@@ -55,19 +57,21 @@ except IOError:
 
 ####  text  ####
 
-txt = {
-       'issueNumT':     "Issue Number",
+txt = {'issueNumT':     "Issue Number",
        'issueNumQ':     "What's the number of issue?",
        'grandTitleT':   "General Title",
        'grandTitleQ':   "What's the general title of the issue?",
        'ediRemarkT':    "Editor's Remarks",
        'ediRemarkQ':    "What are the editor's remarks?",
-       'AddArticleT':   "Add Articles",
-       'AddArticleQ':   "URLs to the articles (one each line):",
+       'AddArticlesT':  "Add Articles",
+       'AddArticlesQ':  "URLs to the articles (one each line):",
+       'URL':           "Set the URL to the article",
+       'AddArticleT':   "Add Article",
        'AddCategoryT':  "Add Category",
        'AddCategoryQ':  "Name of the category:",
        'MdfTitleT':     "Article Title",
        'MdfTitleQ':     "What's the article's title?",
+       'MainTextHint':  "Preview of the main text:",
        'MdfCategoryT':  "Category",
        'MdfCategoryQ':  "Name of the category:",
        'MdfAuthorT':    "Author",
@@ -88,7 +92,7 @@ txt = {
        'AboutH':        "About",
        'issueNo':       "Issue no.",
        'articleNo':     "Total number of articles: ",
-       'emptyContent':  "The webpage has too little textual content",
+       'emptyContent':  "The webpage has too little textual content.",
        }
 
 #####  UI  #####
@@ -96,11 +100,278 @@ txt = {
 ATTR_NORMAL = wx.TextAttr("black", "white")
 ATTR_HIGHLIGHT = wx.TextAttr('black', 'yellow')
 
+class BaseFrame(wx.Frame):
+
+    def __init__(self, *args, **kwargs):
+        super(BaseFrame, self).__init__(*args, **kwargs)
+
+    def url2Article(self, url, issue, clean=True, ratio=None):
+        """Adding one article, giving the user more control.
+        """
+
+        if len(url) <= 2:
+            return None
+
+        url = urlClean(url)
+        for article in issue:
+            if article.url == url:
+                raise RuntimeError(url, "Duplicated website!")
+
+        htmlText = grab(url)
+        if ratio:
+            analysis = analyseHTML(htmlText, ratio)
+        else:
+            analysis = analyseHTML(htmlText)
+        if clean:
+            mainText = cleanText(analysis[0])
+        else:
+            mainText = analysis[0]
+        if len(mainText) <= 1:
+            raise RuntimeError(url, "Can't extract content!")
+        meta = analysis[1]
+        currentArticle = Article(title=meta['title'],
+                                 author=meta['author'],
+                                 text=mainText,
+                                 subheadLines=meta['sub'],
+                                 url=url)
+        return currentArticle
+
+class SetArticleFrame(BaseFrame):
+
+    def DrawSizersAndPanel(self):
+        self.hBox = wx.BoxSizer(wx.HORIZONTAL)
+        self.vBoxLeft = wx.BoxSizer(wx.VERTICAL)
+        self.vBoxRight = wx.BoxSizer(wx.VERTICAL)
+        self.hBox.Add(self.vBoxLeft, 1, flag=wx.ALL|wx.EXPAND, border=15)
+        self.hBox.Add(self.vBoxRight, 0, flag=wx.ALL, border=15)
+        self.panel = wx.Panel(self, wx.ID_ANY)
+        self.panel.SetSizerAndFit(self.hBox)
+
+    def DrawLeftSide(self, articleArgv):
+
+        if articleArgv:
+            url = articleArgv.url
+            title = articleArgv.title
+            text = articleArgv.text
+            self.articleArgv = articleArgv
+        else:
+            url = ''
+            title = ''
+            text = ''
+            self.articleArgv = None
+
+        hintURL = wx.StaticText(self.panel, wx.ID_ANY, txt['URL'])
+        self.vBoxLeft.Add(hintURL, 0)
+
+        urlSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.urlText = wx.TextCtrl(self.panel, value=url)
+        self.hintRatio = wx.StaticText(self.panel, wx.ID_ANY, u'Threshold:')
+        self.ratioText = wx.TextCtrl(self.panel, value='0.5',)
+        self.btnAutoRetrieve = wx.Button(self.panel, label='&Auto retrieve')
+        urlSizer.Add(self.urlText, 1, flag=wx.EXPAND)
+        urlSizer.Add(self.hintRatio, 0, flag=wx.EXPAND)
+        urlSizer.Add(self.ratioText, 0, flag=wx.EXPAND)
+        urlSizer.Add(self.btnAutoRetrieve, 0)
+        self.vBoxLeft.Add(urlSizer, 0, flag=wx.EXPAND)
+        self.btnAutoRetrieve.Bind(wx.EVT_BUTTON, self.OnAutoRetrieve)
+
+        hintTitle = wx.StaticText(self.panel, wx.ID_ANY,
+                                  txt['MdfTitleT'])
+        self.titleText = wx.TextCtrl(self.panel, value=title,)
+        hintMainText = wx.StaticText(self.panel, wx.ID_ANY,
+                                     txt['MainTextHint'])
+        self.mainText = wx.TextCtrl(self.panel, value=text,
+                                    style=wx.TE_BESTWRAP|wx.TE_MULTILINE)
+        self.mainText.SetEditable(False)
+        self.vBoxLeft.Add(hintTitle, 0, wx.TOP, border=10)
+        self.vBoxLeft.Add(self.titleText, 0, wx.BOTTOM|wx.EXPAND,
+                     border=10)
+        self.vBoxLeft.Add(hintMainText, 0, wx.TOP, border=10)
+        self.vBoxLeft.Add(self.mainText, 1, flag=wx.EXPAND)
+
+        self.btnClean = wx.Button(self.panel, label='&Clean text')
+        self.btnClean.Bind(wx.EVT_BUTTON, self.OnCleanText)
+        self.vBoxLeft.Add(self.btnClean, 0)
+
+    def DrawRightSide(self):
+        self.btnOK = wx.Button(self.panel, label='&OK!')
+        self.btnCancel = wx.Button(self.panel, label='&Cancel')
+        self.vBoxRight.Add(self.btnOK, 0)
+        self.vBoxRight.Add(self.btnCancel, 0, flag=wx.TOP, border=5)
+        self.btnOK.Bind(wx.EVT_BUTTON, self.OnOK)
+        self.btnCancel.Bind(wx.EVT_BUTTON, self.OnCancel)
+
+    def __init__(self, articleArgv=None, *args, **kwargs):
+        super(SetArticleFrame, self).__init__(style=wx.STAY_ON_TOP,
+                                               *args, **kwargs)
+        self.DrawSizersAndPanel()
+        self.DrawLeftSide(articleArgv)
+        self.DrawRightSide()
+
+        if not articleArgv:
+            self.btnOK.Disable()
+            self.btnClean.Disable()
+
+        self.SetSize((600, 600))
+        self.SetTitle(txt['AddArticleT'])
+        self.Centre()
+        self.urlText.SetFocus()
+        self.Show(True)
+
+    def OnAutoRetrieve(self, e):
+        mainFrame = self.GetParent()
+        try:
+            ratio =self.ratioText.GetValue()
+            if ratio == '0.5':
+                self.article = self.url2Article(url=self.urlText.GetValue(),
+                                                issue=mainFrame.issue,
+                                                clean=False)
+            else:
+                self.article = self.url2Article(url=self.urlText.GetValue(),
+                                                issue=mainFrame.issue,
+                                                ratio=float(ratio),
+                                                clean=False)
+
+        except RuntimeError as err:
+            try:
+                dlg = wx.MessageDialog(self.panel,
+                                       txt['graberror'] +
+                                       err[0] + ': ' + err[1],
+                                       txt['graberrorCap'],
+                                       wx.OK|wx.ICON_INFORMATION)
+                dlg.ShowModal()
+                dlg.Destroy()
+            except IndexError: # exception not raised by me
+                raise err
+            finally:
+                return
+
+        except ValueError:
+            dlg = wx.MessageDialog(self.panel,
+                                   'Bad threshold ratio!',
+                                   'Bad threshold',
+                                   wx.OK|wx.ICON_INFORMATION)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        if not self.article:
+            return
+
+        self.btnOK.Enable()
+        self.btnClean.Enable()
+        self.titleText.SetValue(self.article.title)
+        self.mainText.SetValue(self.article.text)
+
+    def OnOK(self, e):
+        mainFrame = self.GetParent()
+        if self.articleArgv:
+            self.articleArgv.title = self.titleText.GetValue()
+            self.articleArgv.text = self.mainText.GetValue()
+            self.article = self.articleArgv  #Delete after parenting issues solved
+        else:
+            self.article.title = self.titleText.GetValue()
+            self.article.text = self.mainText.GetValue()
+            mainFrame.issue.addArticle(self.article)
+            mainFrame.articleList.Append(self.article.title)
+        #TODO stop telling your parent what to do!
+        mainFrame.Enable()
+        itemIndex = mainFrame.articleList.GetSelection()
+        mainFrame.articleList.SetString(itemIndex, self.article.title)
+        mainFrame.updateInfoBar(itemIndex)
+        mainFrame.updateTextBox()
+        mainFrame.updateCatInfo()
+        self.Destroy()
+
+    def OnCancel(self, e):
+        self.Destroy()
+        self.GetParent().Enable()
+
+    def OnCleanText(self, e):
+        text = self.mainText.GetValue()
+        text = cleanText(text)
+        self.mainText.SetValue(text)
+
+class AddArticlesFrame(BaseFrame):
+    """Window where user inputs a list of urls for downloading"""
+
+    def __init__(self, *args, **kwargs):
+        super(AddArticlesFrame, self).__init__(style=wx.STAY_ON_TOP,
+                                               *args, **kwargs)
+        self.hBox = wx.BoxSizer(wx.HORIZONTAL)
+        self.vBox1 = wx.BoxSizer(wx.VERTICAL)
+        self.vBox2 = wx.BoxSizer(wx.VERTICAL)
+        self.hBox.Add(self.vBox1, 1, flag=wx.EXPAND|wx.ALL, border=15)
+        self.hBox.Add(self.vBox2, 0, flag=wx.EXPAND|wx.ALL, border=15)
+
+        self.panel = wx.Panel(self, wx.ID_ANY)
+        self.panel.SetSizerAndFit(self.hBox)
+
+        self.hintText = wx.StaticText(self.panel, wx.ID_ANY, txt['AddArticlesQ'])
+        self.urlText = wx.TextCtrl(self.panel, value='', style=wx.TE_MULTILINE)
+        self.vBox1.Add(self.hintText, 0, wx.EXPAND)
+        self.vBox1.Add(self.urlText, 1, wx.EXPAND|wx.TOP, border=5)
+
+        btnOK = wx.Button(self.panel, label='&Import!')
+        btnCancel = wx.Button(self.panel, label='&Cancel')
+        self.vBox2.Add(btnOK)
+        self.vBox2.Add(btnCancel, flag=wx.TOP, border=5)
+        btnOK.Bind(wx.EVT_BUTTON, self.OnOK)
+        btnCancel.Bind(wx.EVT_BUTTON, self.OnCancel)
+
+        self.SetSize((400, 400))
+        self.SetTitle(txt['AddArticlesT'])
+        self.Centre()
+        self.urlText.SetFocus()
+        self.Show(True)
+
+    def OnOK(self, e):
+        urls = self.urlText.GetValue().splitlines()
+        if not urls:
+            return
+        articleList = []
+        mainFrame = self.GetParent()
+
+        for url in urls:
+            try:
+                article = self.url2Article(url, mainFrame.issue)
+                articleList.append(article)
+            except RuntimeError as err:
+                try:
+                    dlg = wx.MessageDialog(self.panel,
+                                           txt['graberror']+
+                                           err[0] + ': ' + err[1],
+                                           txt['graberrorCap'],
+                                           wx.OK|wx.ICON_INFORMATION)
+                    dlg.ShowModal()
+                    dlg.Destroy()
+                except IndexError: # exception is not tuple: not raised by me
+                    raise err
+
+        for article in articleList:
+            mainFrame.issue.addArticle(article)
+            mainFrame.articleList.Append(article.title)
+
+            count = mainFrame.articleList.GetCount()
+            pos = mainFrame.articleList.GetSelection()
+            if (count >= 2) and (pos != -1):
+                if pos != 0:
+                    mainFrame.btnUp.Enable(True)
+                if pos != count - 1:
+                    mainFrame.btnDn.Enable(True)
+
+        mainFrame.updateCatInfo()
+        mainFrame.Enable()
+        self.Destroy()
+
+    def OnCancel(self, e):
+        self.GetParent().Enable()
+        self.Destroy()
+
+
 class MainFrame(wx.Frame):
 
-    """
-    Main interactive window
-    """
+    """ Main interactive window """
 
     def __init__(self, currentIssue, *args, **kwargs):
         super(MainFrame, self).__init__(*args, **kwargs)
@@ -110,7 +381,8 @@ class MainFrame(wx.Frame):
 
     def DrawPanels(self):
         self.panel = wx.Panel(self, wx.ID_ANY)
-        self.panelInfoBar = wx.Panel(self.panel, wx.ID_ANY, style=wx.SUNKEN_BORDER)
+        self.panelInfoBar = wx.Panel(self.panel, wx.ID_ANY,
+                                     style=wx.SUNKEN_BORDER)
         self.panelInfoBar.SetBackgroundColour(wx.Colour(202, 237, 218))
         self.panelInfoBar.Bind(wx.EVT_LEFT_DOWN, self.OnModifyItemInfo)
 
@@ -118,66 +390,69 @@ class MainFrame(wx.Frame):
         self.hBox = wx.BoxSizer(wx.HORIZONTAL)
         self.vBoxLeft = wx.BoxSizer(wx.VERTICAL)
         self.vBoxRight = wx.BoxSizer(wx.VERTICAL)
-        self.hBox.Add(self.vBoxLeft, proportion=1, flag=wx.EXPAND|wx.ALL, border=5)
-        self.hBox.Add(self.vBoxRight, proportion=3, flag=wx.EXPAND|wx.ALL, border=5)
+        self.hBox.Add(self.vBoxLeft, proportion=1,
+                      flag=wx.EXPAND|wx.ALL, border=5)
+        self.hBox.Add(self.vBoxRight, proportion=3,
+                      flag=wx.EXPAND|wx.ALL, border=5)
         self.panel.SetSizerAndFit(self.hBox)
-        self.gridBox = wx.GridSizer(2, 3)   #self.gridBoxer scales better
+        self.gridBox = wx.GridSizer(2, 4)   #self.gridBoxer scales better
         self.vBoxLeft.Add(self.gridBox, proportion=0, flag=wx.EXPAND)
         self.vBoxRight.Add(self.panelInfoBar, 0, flag=wx.EXPAND)
 
     def DrawMainToolbar(self):
         self.toolbar = self.CreateToolBar()
         newIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                                                 label='NewIssue',
-                                                 bitmap=wx.Bitmap('img/newissue.png'),
-                                                 shortHelp='',
-                                                 )
+                label='NewIssue',
+                bitmap=wx.Bitmap('img/newissue.png'),
+                shortHelp='',
+                )
 
         openIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                                                  label='OpenIssue',
-                                                  bitmap=wx.Bitmap('img/openissue.png'),
-                                                  shortHelp='',
-                                                  )
+                label='OpenIssue',
+                bitmap=wx.Bitmap('img/openissue.png'),
+                shortHelp='',
+                )
 
         saveIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                                                  label='SaveIssue',
-                                                  bitmap=wx.Bitmap('img/saveissue.png'),
-                                                  shortHelp='',
-                                                  )
+                label='SaveIssue',
+                bitmap=wx.Bitmap('img/saveissue.png'),
+                shortHelp='',
+                )
 
         self.toolbar.AddSeparator()
 
         configIssueTool = self.toolbar.AddLabelTool(wx.ID_SETUP,
-                                                    label='ConfigureIssue',
-                                                    bitmap=wx.Bitmap('img/configissue.png'),
-                                                    shortHelp=txt['configIssueH'],
-                                                    )
+                label='ConfigureIssue',
+                bitmap=wx.Bitmap('img/configissue.png'),
+                shortHelp=txt['configIssueH'],
+                )
 
 
         self.getDocTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                                               label='GetDoc',
-                                               bitmap=wx.Bitmap('img/getdoc.png'),
-                                               shortHelp=txt['getDocH'],
-                                               )
+                label='GetDoc',
+                bitmap=wx.Bitmap('img/getdoc.png'),
+                shortHelp=txt['getDocH'],
+                )
 
         publishTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                                                label='Publish',
-                                                bitmap=wx.Bitmap('img/publish.png'),
-                                                shortHelp='',
-                                                )
+                label='Publish',
+                bitmap=wx.Bitmap('img/publish.png'),
+                shortHelp='',
+                )
+
         self.toolbar.AddSeparator()
 
         aboutTool = self.toolbar.AddLabelTool(wx.ID_ABOUT,
-                                              label='About',
-                                              bitmap=wx.Bitmap('img/about.png'),
-                                              shortHelp=txt['AboutH'],
-                                              )
+                label='About',
+                bitmap=wx.Bitmap('img/about.png'),
+                shortHelp=txt['AboutH'],
+                )
 
         quitTool = self.toolbar.AddLabelTool(wx.ID_EXIT,
-                                             label='Quit',
-                                             bitmap=wx.Bitmap('img/quit.png'),
-                                             shortHelp=txt['quitH'],
-                                             )
+                label='Quit',
+                bitmap=wx.Bitmap('img/quit.png'),
+                shortHelp=txt['quitH'],
+                )
 
         self.Bind(wx.EVT_TOOL, self.OnNewIssue, newIssueTool)
         self.Bind(wx.EVT_TOOL, self.OnOpenIssue, openIssueTool)
@@ -212,10 +487,14 @@ class MainFrame(wx.Frame):
                                 wx.DefaultPosition, wx.DefaultSize,
                                 style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
 
-        infoBarBox.Add(self.infoBar1, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
-        infoBarBox.Add(self.infoBar2, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
-        infoBarBox.Add(self.infoBar3, 0, flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
-        infoBarBox.Add(self.infoBar4, 0, flag=wx.TOP|wx.LEFT|wx.BOTTOM|wx.EXPAND, border=5)
+        infoBarBox.Add(self.infoBar1, 0,
+                       flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
+        infoBarBox.Add(self.infoBar2, 0,
+                       flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
+        infoBarBox.Add(self.infoBar3, 0,
+                       flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
+        infoBarBox.Add(self.infoBar4, 0,
+                       flag=wx.TOP|wx.LEFT|wx.BOTTOM|wx.EXPAND, border=5)
 
         self.infoBar1.Bind(wx.EVT_LEFT_DOWN, self.OnConfigIssue)
         self.infoBar2.Bind(wx.EVT_LEFT_DOWN, self.OnModifyItemInfo)
@@ -228,8 +507,9 @@ class MainFrame(wx.Frame):
         self.panelInfoBar.SetSizerAndFit(infoBarBox)
 
     def DrawArticleListAndButtons(self):
-        self.articleList = wx.ListBox(self.panel, wx.ID_ANY, wx.DefaultPosition,
-                                      wx.DefaultSize, self.issue.articleList)
+        self.articleList = wx.ListBox(self.panel, wx.ID_ANY,
+                                      wx.DefaultPosition, wx.DefaultSize,
+                                      self.issue.articleList)
         self.vBoxLeft.Add(self.articleList, proportion=1, flag=wx.EXPAND)
         self.Bind(wx.EVT_LISTBOX, self.OnArticleListClick,
                   self.articleList)
@@ -238,25 +518,29 @@ class MainFrame(wx.Frame):
 
         # Toolbar
         self.btnAddArticle = wx.BitmapButton(self.panel, wx.ID_ANY,
-                                             wx.Bitmap('img/addarticle.png'),)
+                                             wx.Bitmap('img/addarticle.png'))
+
+        self.btnAddArticles = wx.BitmapButton(self.panel, wx.ID_ANY,
+                                              wx.Bitmap('img/addmany.png'))
 
         self.btnAddCategory = wx.BitmapButton(self.panel, wx.ID_ANY,
-                                              wx.Bitmap('img/addcategory.png'),)
+                                              wx.Bitmap('img/addcategory.png'))
 
         self.btnDel = wx.BitmapButton(self.panel, wx.ID_DELETE,
-                                     wx.Bitmap('img/delete.png'),)
+                                     wx.Bitmap('img/delete.png'))
 
         self.btnUp = wx.BitmapButton(self.panel, wx.ID_UP,
-                                     wx.Bitmap('img/up.png'),)
+                                     wx.Bitmap('img/up.png'))
 
         self.btnDn = wx.BitmapButton(self.panel, wx.ID_DOWN,
-                                     wx.Bitmap('img/down.png'),)
+                                     wx.Bitmap('img/down.png'))
 
         self.btnMdf = wx.BitmapButton(self.panel, wx.ID_ANY,
-                                     wx.Bitmap('img/modify.png'),)
+                                     wx.Bitmap('img/modify.png'))
 
 
-        for button in (self.btnAddArticle, self.btnAddCategory, self.btnDel,
+        for button in (self.btnAddArticle, self.btnAddArticles,
+                       self.btnAddCategory, self.btnDel,
                        self.btnUp, self.btnDn, self.btnMdf):
             self.gridBox.Add(button, flag=wx.EXPAND)
             button.Enable(False)
@@ -265,7 +549,8 @@ class MainFrame(wx.Frame):
         self.btnDn.Bind(wx.EVT_BUTTON, self.OnDown)
         self.btnMdf.Bind(wx.EVT_BUTTON, self.OnModifyItemInfo)
         self.btnDel.Bind(wx.EVT_BUTTON, self.OnDelete)
-        self.btnAddArticle.Bind(wx.EVT_BUTTON, self.OnAddArticles)
+        self.btnAddArticle.Bind(wx.EVT_BUTTON, self.OnAddArticle)
+        self.btnAddArticles.Bind(wx.EVT_BUTTON, self.OnAddArticles)
         self.btnAddCategory.Bind(wx.EVT_BUTTON, self.OnAddCategory)
 
     def DrawTextboxAndButtons(self):
@@ -274,9 +559,9 @@ class MainFrame(wx.Frame):
                                    value='',
                                    style=wx.TE_MULTILINE|wx.TE_RICH2)
         self.textBox.SetEditable(False)
-        self.vBoxRight.Add(self.textBox, 6, flag=wx.EXPAND|wx.TOP|wx.TE_BESTWRAP, border=5)
+        self.vBoxRight.Add(self.textBox, 6,
+                           flag=wx.EXPAND|wx.TOP|wx.TE_BESTWRAP, border=5)
         self.textBox.SetFont(wx.Font(11, wx.ROMAN, wx.NORMAL, wx.NORMAL))
-        self.Layout()
 
         # Buttons to manipulate the text
         self.btnSubhead = wx.BitmapButton(self.panel,
@@ -328,13 +613,15 @@ class MainFrame(wx.Frame):
 
         if DEBUG:
             self.btnAddArticle.Enable(True)
+            self.btnAddArticles.Enable(True)
             self.btnAddCategory.Enable(True)
             self.toolbar.EnableTool(self.getDocTool.Id, True)
 
         # Set up main frame
+        self.Layout()
         self.SetSize((800, 600))
         self.basicTitle = (u'活字 ' + __version__ +
-                          ' (AEP: ' + __AEPVERSION__ + ')')
+                          ' (AEP: ' + __aepversion__ + ')')
         self.SetTitle(self.basicTitle)
         self.Centre()
         self.Show(True)
@@ -380,6 +667,7 @@ class MainFrame(wx.Frame):
             self.firstConfig = False
 
         self.btnAddArticle.Enable(True)
+        self.btnAddArticles.Enable(True)
         self.btnAddCategory.Enable(True)
         if os.name == 'nt':
             # TODO: Registry checking for Word
@@ -390,76 +678,15 @@ class MainFrame(wx.Frame):
                       'Issue ' + self.issue.issueNum +
                       self.issue.grandTitle)
 
+    def OnAddArticle(self, e):
+        self.Disable()
+        SetArticleFrame(articleArgv=None, parent=self)
+
     def OnAddArticles(self, e):
-
-        """
-        Ask for a list of URLs and retrieve and process them, and update
-        the article list.
-        """
-
-        urlText = self.askInfo(txt['AddArticleQ'],
-                               txt['AddArticleT'],
-                               multiline=True)
-        if urlText is None:
-            return
-        urlList = urlText.split('\n')
-        articlesToUpdate = []
-
-        for url in urlList:
-            if len(url) <= 2:
-                continue
-
-            # Deal with duplicated articles
-            url = urlClean(url)
-            try:
-                for article in self.issue:
-                    if article.url == url:
-                        dlg = wx.MessageDialog(self.panel,
-                                               txt['duplicate'] + url,
-                                               txt['duplicateCap'],
-                                               wx.OK|wx.ICON_INFORMATION)
-                        dlg.ShowModal()
-                        dlg.Destroy()
-                        raise ValueError
-            except ValueError:
-                continue
-
-            try:
-                htmlText = grab(url)
-                analysis = analyseHTML(htmlText)
-                mainText = cleanText(analysis[0])
-                if len(mainText) <= 1:
-                    raise RuntimeError("Can't extract content!")
-                meta = analysis[1]
-                currentArticle = Article(title=meta['title'], author=meta['author'],
-                                         text=mainText, subheadLines=meta['sub'], url=url)
-                self.issue.addArticle(currentArticle)
-                articlesToUpdate.append(currentArticle)
-
-            except (TypeError, RuntimeError) as err:
-                dlg = wx.MessageDialog(self.panel,
-                                       txt['graberror']+ url +': '+str(err),
-                                       txt['graberrorCap'],
-                                       wx.OK|wx.ICON_INFORMATION)
-                dlg.ShowModal()
-                dlg.Destroy()
-                continue
-
-        #Update articleList box
-        pos = self.articleList.GetCount()
-        for article in articlesToUpdate:
-            self.articleList.Insert(article.title, pos)
-            pos += 1
-
-        count = self.articleList.GetCount()
-        pos = self.articleList.GetSelection()
-        if (count >= 2) and (pos != -1):
-            if pos != 0:
-                self.btnUp.Enable(True)
-            if pos != count - 1:
-                self.btnDn.Enable(True)
-
-        self.updateCatInfo()
+        """ Ask for a list of URLs and retrieve and process them, and update
+        the article list.  """
+        self.Disable()
+        AddArticlesFrame(self)
 
     def OnAddCategory(self, e):
         cat = self.askInfo(txt['AddCategoryQ'],
@@ -468,7 +695,7 @@ class MainFrame(wx.Frame):
             return
 
         # Update articleList box
-        cat = u'【' + cat + u'】'
+        cat = BRA_L + cat + BRA_R
         pos = self.articleList.GetSelection()
         if pos == -1:
             self.articleList.Insert(cat, 0)
@@ -500,22 +727,24 @@ class MainFrame(wx.Frame):
                 _isCat(swappedTitle)):
             for article in self.issue:
                 if article.title == selectedTitle:
-                    articleNumA = self.issue.articleList.index(article)
+                    artNo1 = self.issue.articleList.index(article)
                 elif article.title == swappedTitle:
-                    articleNumB = self.issue.articleList.index(article)
-            self.issue.articleList[articleNumA], self.issue.articleList[articleNumB] =\
-            self.issue.articleList[articleNumB], self.issue.articleList[articleNumA]
+                    artNo2 = self.issue.articleList.index(article)
+            al = self.issue.articleList
+            al[artNo1], al[artNo2] = al[artNo2], al[artNo1]
+
         self.updateInfoBar(itemIndex-1)
         self.updateCatInfo()
+
         # On Windows, moving items does not trigger EVT_LISTBOX, which means
         # OnArticleListClick would not run, leaving buttons inproperly
         # enabled or disabled.
         if os.name == 'nt':
             self.btnUp.Enable(True)
             self.btnDn.Enable(True)
-            if itemIndex-1 == 0:
+            if itemIndex - 1 == 0:
                 self.btnUp.Enable(False)
-            if itemIndex-1 == self.articleList.GetCount() - 1:
+            if itemIndex - 1 == self.articleList.GetCount() - 1:
                 self.btnDn.Enable(False)
 
     def OnDown(self, e):
@@ -536,11 +765,12 @@ class MainFrame(wx.Frame):
                 _isCat(swappedTitle)):
             for article in self.issue:
                 if article.title == selectedTitle:
-                    articleNumA = self.issue.articleList.index(article)
+                    artNo1 = self.issue.articleList.index(article)
                 elif article.title == swappedTitle:
-                    articleNumB = self.issue.articleList.index(article)
-            self.issue.articleList[articleNumA], self.issue.articleList[articleNumB] =\
-            self.issue.articleList[articleNumB], self.issue.articleList[articleNumA]
+                    artNo2 = self.issue.articleList.index(article)
+            al = self.issue.articleList
+            al[artNo1], al[artNo2] = al[artNo2], al[artNo1]
+
         self.updateInfoBar(itemIndex+1)
         self.updateCatInfo()
         if os.name == 'nt':
@@ -553,46 +783,12 @@ class MainFrame(wx.Frame):
 
     def OnModifyItemInfo(self, e):
         itemIndex = self.articleList.GetSelection()
-        if _isCat(self.articleList.GetStringSelection()):
-            cat = self.askInfo(txt['MdfCategoryQ'], txt['MdfCategoryT'],
-                               self.articleList.GetStringSelection()[1:-1],
-                               False, True)
-            cat = u'【' + cat + u'】'
-            if cat is not None:
-                self.articleList.SetString(itemIndex, cat)
-        else:
-            if itemIndex == -1:
-                return
-            selectedArticle = self.getSelectedArticle()
-            title = self.askInfo(txt['MdfTitleQ'], txt['MdfTitleT'],
-                                 selectedArticle.title,
-                                 noCancel=True)
-            author = self.askInfo(txt['MdfAuthorQ'], txt['MdfAuthorT'],
-                                  selectedArticle.author,
-                                  noCancel=True)
-            authorBio = self.askInfo(txt['MdfAuthorBioQ'], txt['MdfAuthorBioT'],
-                                     selectedArticle.authorBio,
-                                     noCancel=True)
-            dlgPortrait = wx.FileDialog(None, message=txt['PortraitT'],
-                wildcard="Images|*.jpg;*.jpeg;*.gif;*.png;*.bmp")
-            if dlgPortrait.ShowModal() == wx.ID_OK:
-                portraitPath = dlgPortrait.GetPath()
-                dlgPortrait.Destroy()
-            else:
-                portraitPath = None
-
-            if title is not None:
-                selectedArticle.title = title
-            if author is not None:
-                selectedArticle.author = author
-            if authorBio is not None:
-                selectedArticle.authorBio = authorBio
-            if portraitPath is not None:
-                selectedArticle.portraitPath = portraitPath
-
-            self.articleList.SetString(itemIndex, selectedArticle.title)
-            self.updateInfoBar(itemIndex)
-
+        article = self.getSelectedArticle()
+        SetArticleFrame(articleArgv=article,
+                        parent=self)
+        self.articleList.SetString(itemIndex, article.title)
+        self.updateInfoBar(itemIndex)
+        self.updateTextBox()
         self.updateCatInfo()
 
     def OnDelete(self, e):
@@ -600,7 +796,9 @@ class MainFrame(wx.Frame):
         selectedTitle = self.articleList.GetString(itemIndex)
 
         if not _isCat(selectedTitle):
-            dlgYesNo = wx.MessageDialog(None, txt['DelArticle']+selectedTitle+" ?", style=wx.YES|wx.NO)
+            dlgYesNo = wx.MessageDialog(None,
+                                        txt['DelArticle']+selectedTitle+" ?",
+                                        style=wx.YES|wx.NO)
             if dlgYesNo.ShowModal() != wx.ID_YES:
                 return
             selectedArticle = self.getSelectedArticle()
@@ -618,8 +816,9 @@ class MainFrame(wx.Frame):
 
     def OnEditText(self, e):
 
-        for tool in (self.articleList, self.btnAddArticle, self.btnAddCategory,
-                    self.btnDel, self.btnUp, self.btnDn, self.btnMdf):
+        for tool in (self.articleList, self.btnAddArticle, self.btnAddArticles,
+                     self.btnAddCategory, self.btnDel, self.btnUp, self.btnDn,
+                     self.btnMdf):
             tool.wasEnabled = tool.IsEnabled()
             tool.Enable(False)
 
@@ -636,8 +835,9 @@ class MainFrame(wx.Frame):
 
     def OnSaveEdit(self, e):
 
-        for tool in (self.articleList, self.btnAddArticle, self.btnAddCategory,
-                    self.btnDel, self.btnUp, self.btnDn, self.btnMdf):
+        for tool in (self.articleList, self.btnAddArticle, self.btnAddArticles,
+                     self.btnAddCategory, self.btnDel, self.btnUp, self.btnDn,
+                     self.btnMdf):
             if tool.wasEnabled:
                 tool.Enable(True)
 
@@ -782,7 +982,7 @@ class MainFrame(wx.Frame):
         cat = ''
         for i in range(0, self.articleList.GetCount()):
             item = self.articleList.GetString(i)
-            if _isCat(s):
+            if _isCat(item):
                 cat = item[1:-1]
             else:
                 for article in self.issue.articleList:
@@ -790,7 +990,8 @@ class MainFrame(wx.Frame):
                         break
                 article.category = cat
 
-    def askInfo(self, prompt, dialogTitle, defaultVal='', multiline=False, noCancel=False):
+    def askInfo(self, prompt, dialogTitle, defaultVal='',
+                multiline=False, noCancel=False):
 
         """
         Open a dialog and ask the user for information.
@@ -833,7 +1034,7 @@ class MainFrame(wx.Frame):
             print article.text
 
 def _isCat(title):
-    return title.startswith(u'【') and title.endswith(u'】')
+    return title.startswith(BRA_L) and title.endswith(BRA_R)
 
 def _main():
     currentIssue = Issue()

@@ -1,1 +1,9 @@
-On Windows XP, Highlighting malfunctions for the first or last line, at times.
+1. On Windows XP, Highlighting malfunctions for the first or last line, at times.
+
+2. If a subheadline repeats itself in the text, only the first will be highlighted
+      in the GUI, but all instances will be bolded in doc file created. This is
+      due to the text-based storage system. Until it is converted to line number-
+      #based, it is unlikely to be solved. Fortunately, it's rare that two
+      identical lines exists, and only one is subheadline.
+
+3. If a category has no articles under it, it will be ignored in final output.

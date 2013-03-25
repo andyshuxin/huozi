@@ -7,13 +7,9 @@
 
 # Copyright (C) 2013 Shu Xin
 
-__version__ = '0.03'
+__version__ = '0.04'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
-
-
-
-## Constants
 
 import sys
 import os
@@ -67,6 +63,9 @@ CLEANERBOOK = (
 AUTHORMARKERS = (u'作者:', u'文:', u'作者：', u'文：')
 
 PUNCTUATIONS = (',', '.', ':', ')', u'，', u'。', u'：', u'）')
+
+BRA_L = u'【'
+BRA_R = u'】'
 
 #####  Data strcture  #####
 
@@ -245,7 +244,7 @@ def _guessMeta(htmlText, plainText):
 
     return (cleanText(title), cleanText(author), subs)
 
-def analyseHTML(htmlText):
+def analyseHTML(htmlText, ratio=None):
 
     """
     Input: htmlText, a string, which is a html file
@@ -255,10 +254,13 @@ def analyseHTML(htmlText):
     """
 
     mainText = extMainText(htmlText)
-    ratio = 0.5
-    while (len(get_text(mainText)) <= 1) and (ratio > 0):
+    if ratio:
         mainText = extMainText(htmlText, ratio, False)
-        ratio -= 0.1
+    else:
+        ratio = 0.5
+        while (len(get_text(mainText)) <= 1) and (ratio > 0):
+            mainText = extMainText(htmlText, ratio, False)
+            ratio -= 0.1
     mainText = get_text(mainText)
 
     meta = _guessMeta(htmlText, mainText)
@@ -310,14 +312,12 @@ def grab(url):
             return result
 
     def _isLegit(char):
-        """ Return true if char can be part of a charset name """
+        """ Return true if char can be part of a charset statement """
         if (char in string.ascii_letters or
             char in string.digits or
             char == '-'):
            return True
-        else:
-           return False
-
+        return False
 
     #url = urlClean(url)        # the step moved to huozi.py
     userAgent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; Huozi)'
@@ -327,9 +327,9 @@ def grab(url):
     try:
         html = opener.open(req).read()
     except urllib2.HTTPError:
-        raise RuntimeError("Connection fails!")
+        raise RuntimeError(url, "Connection fails!")
     except urllib2.URLError:
-        raise RuntimeError("Bad URL!")
+        raise RuntimeError(url, "Bad URL!")
 
     # Get encoding info, and decode accordingly.
     charset = ''
@@ -402,7 +402,7 @@ def createDoc(issue):
         # Category name, if any
         if article.category != category:
             category = article.category
-            rng.InsertAfter(u'【' + category + u'】' + '\r\n')
+            rng.InsertAfter(BRA_L + category + BRA_R + '\r\n')
             rng.Style = win32.constants.wdStyleHeading1
             rng.Collapse( win32.constants.wdCollapseEnd )
 

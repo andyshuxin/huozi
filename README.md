@@ -13,10 +13,13 @@ It includes these tools:
 
 ## System Requirment
 + lxml, BeautifulSoup 4
+For auto-detection of charset:
 + chardet
-+ MS Word (for doc output)
+For doc export:
++ MS Windows XP or 7; Vista should probably work but not tested.
++ MS Word 2007 or 2010; Version 2013 and 2003 could work as well.
 
-## Package Structure
+## Software Structure
 For a closer look at the structure of the package, see [package structure](https://docs.google.com/drawings/d/1a7UuFqxJZ2w612ZCunHIQBt-jXBpSWyJm_HNQ4I4vuE/edit?usp=sharing).
 
 
