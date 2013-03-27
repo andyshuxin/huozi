@@ -19,18 +19,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # ==== Works by others ====
+
 # ExtMainText.py:
 #   Copyright (c) 2009, Elias Soong, all rights reserved.
+
 # Redirect and Error handler in aep.py:
 #   taken from Dive into Python,
 #   Copyright (c) 2000, 2001, 2002, 2003, 2004 Mark Pilgrim
+
 # In-app icons:
 #   taken from Default Icon. Credit to interactivemania
 #   (http://www.interactivemania.com).
+
 # Applicaion icon: 
 #   Downloaded from http://thenounproject.com/noun/keyboard/#icon-No3041
 #   Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
 #   from The Noun Project
+
 # Template.dot:
 #   Layout designed by Pan Wenyi, Co-China Forum. Text by Co-China Forum.
 #   Copyrighted and not distributed under GPL.
@@ -69,9 +74,11 @@ txt = {'issueNumT':     "Issue Number",
        'AddArticleT':   "Add Article",
        'AddCategoryT':  "Add Category",
        'AddCategoryQ':  "Name of the category:",
+       'MdfCategoryT':  "Change Category",
+       'MdfCategoryQ':  "Name of the category:",
        'MdfTitleT':     "Article Title",
        'MdfTitleQ':     "What's the article's title?",
-       'MainTextHint':  "Preview of the main text:",
+       'MainTextHint':  "Preview of the main text(please avoid editing here):",
        'MdfCategoryT':  "Category",
        'MdfCategoryQ':  "Name of the category:",
        'MdfAuthorT':    "Author",
@@ -105,27 +112,27 @@ class BaseFrame(wx.Frame):
     def __init__(self, *args, **kwargs):
         super(BaseFrame, self).__init__(*args, **kwargs)
 
-    def url2Article(self, url, issue, clean=True, ratio=None):
+    def url2Article(self, url, issue, clean=True, ratio=None,
+                    detectDuplicate=False):
         """Adding one article, giving the user more control.
+        If ratio is not given, try 0.5, then if there are too few contents,
+        try 0.4, then 0.3...
         """
 
         if len(url) <= 2:
             return None
 
         url = urlClean(url)
-        for article in issue:
-            if article.url == url:
-                raise RuntimeError(url, "Duplicated website!")
+        if detectDuplicate:
+            for article in issue:
+                if article.url == url:
+                    raise RuntimeError(url, "Duplicated website!")
 
         htmlText = grab(url)
-        if ratio:
-            analysis = analyseHTML(htmlText, ratio)
-        else:
-            analysis = analyseHTML(htmlText)
-        if clean:
-            mainText = cleanText(analysis[0])
-        else:
-            mainText = analysis[0]
+        if not ratio:
+            ratio = 0.5
+        analysis = analyseHTML(htmlText, ratio)
+        mainText = cleanText(analysis[0])
         if len(mainText) <= 1:
             raise RuntimeError(url, "Can't extract content!")
         meta = analysis[1]
@@ -134,9 +141,40 @@ class BaseFrame(wx.Frame):
                                  text=mainText,
                                  subheadLines=meta['sub'],
                                  url=url)
+        currentArticle.ratio = unicode(ratio)
+        if clean:
+            currentArticle.noClean = False
+        else:
+            currentArticle.noClean = True
         return currentArticle
 
+##### Window of Adding One Article #####
+
 class SetArticleFrame(BaseFrame):
+
+    def __init__(self, articleArgv=None, *args, **kwargs):
+        super(SetArticleFrame, self).__init__(style=wx.STAY_ON_TOP,
+                                               *args, **kwargs)
+
+        self.DrawSizersAndPanel()
+        self.DrawLeftSide(articleArgv)
+        self.DrawRightSide(articleArgv)
+
+        self.SetSize((600, 600))
+        self.SetTitle(txt['AddArticleT'])
+        self.Centre()
+        self.urlText.SetFocus()
+        self.Show(True)
+
+    def askPortraitPath(self):
+        dlgPortrait = wx.FileDialog(None, message=txt['PortraitT'],
+            wildcard="Images|*.jpg;*.jpeg;*.gif;*.png;*.bmp")
+        if dlgPortrait.ShowModal() == wx.ID_OK:
+            portraitPath = dlgPortrait.GetPath()
+            dlgPortrait.Destroy()
+        else:
+            portraitPath = None
+        return portraitPath
 
     def DrawSizersAndPanel(self):
         self.hBox = wx.BoxSizer(wx.HORIZONTAL)
@@ -150,23 +188,30 @@ class SetArticleFrame(BaseFrame):
     def DrawLeftSide(self, articleArgv):
 
         if articleArgv:
+            self.articleArgv = articleArgv
             url = articleArgv.url
             title = articleArgv.title
             text = articleArgv.text
-            self.articleArgv = articleArgv
-        else:
+            ratio = articleArgv.ratio
+            author = articleArgv.author
+        else:  # New article
+            self.article = Article()
+            self.articleArgv = None
             url = ''
             title = ''
             text = ''
-            self.articleArgv = None
+            ratio = '0.5'
+            author = ''
 
         hintURL = wx.StaticText(self.panel, wx.ID_ANY, txt['URL'])
         self.vBoxLeft.Add(hintURL, 0)
 
+        # URL block
         urlSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.urlText = wx.TextCtrl(self.panel, value=url)
-        self.hintRatio = wx.StaticText(self.panel, wx.ID_ANY, u'Threshold:')
-        self.ratioText = wx.TextCtrl(self.panel, value='0.5',)
+        self.hintRatio = wx.StaticText(self.panel, wx.ID_ANY, u'Threshold:',)
+        self.ratioText = wx.TextCtrl(self.panel, value=ratio,
+                                     size=(40,10))
         self.btnAutoRetrieve = wx.Button(self.panel, label='&Auto retrieve')
         urlSizer.Add(self.urlText, 1, flag=wx.EXPAND)
         urlSizer.Add(self.hintRatio, 0, flag=wx.EXPAND)
@@ -175,25 +220,43 @@ class SetArticleFrame(BaseFrame):
         self.vBoxLeft.Add(urlSizer, 0, flag=wx.EXPAND)
         self.btnAutoRetrieve.Bind(wx.EVT_BUTTON, self.OnAutoRetrieve)
 
+        # Main text block
         hintTitle = wx.StaticText(self.panel, wx.ID_ANY,
                                   txt['MdfTitleT'])
         self.titleText = wx.TextCtrl(self.panel, value=title,)
+        self.titleText.Bind(wx.EVT_TEXT, self.OnTitleTextChange)
+
         hintMainText = wx.StaticText(self.panel, wx.ID_ANY,
                                      txt['MainTextHint'])
         self.mainText = wx.TextCtrl(self.panel, value=text,
                                     style=wx.TE_BESTWRAP|wx.TE_MULTILINE)
-        self.mainText.SetEditable(False)
         self.vBoxLeft.Add(hintTitle, 0, wx.TOP, border=10)
         self.vBoxLeft.Add(self.titleText, 0, wx.BOTTOM|wx.EXPAND,
                      border=10)
         self.vBoxLeft.Add(hintMainText, 0, wx.TOP, border=10)
         self.vBoxLeft.Add(self.mainText, 1, flag=wx.EXPAND)
 
-        self.btnClean = wx.Button(self.panel, label='&Clean text')
-        self.btnClean.Bind(wx.EVT_BUTTON, self.OnCleanText)
-        self.vBoxLeft.Add(self.btnClean, 0)
+        # Author block
+        self.authorInfoSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.vBoxLeft.Add(self.authorInfoSizer, 0,
+                          flag=wx.EXPAND|wx.TOP, border=10)
+        self.hintAuthor = wx.StaticText(self.panel, wx.ID_ANY, 'Author:')
+        self.authorText = wx.TextCtrl(self.panel, value=author)
+        self.authorInfoSizer.Add(self.hintAuthor, 0)
+        self.authorInfoSizer.Add(self.authorText, 0)
 
-    def DrawRightSide(self):
+        #Portrait block
+        self.portraitBox = wx.StaticBitmap(self.panel, wx.ID_ANY,
+                                           size=(100, 100))
+        self.btnSetPortrait = wx.Button(self.panel, label='Set &Portrait')
+        self.btnSetPortrait.Bind(wx.EVT_BUTTON, self.OnSetPortrait)
+        self.vBoxLeft.Add(self.portraitBox, 0, flag=wx.TOP, border=10)
+        self.vBoxLeft.Add(self.btnSetPortrait, 0)
+        self.portraitPath = ''
+
+        #self.panel.Layout()
+
+    def DrawRightSide(self, articleArgv):
         self.btnOK = wx.Button(self.panel, label='&OK!')
         self.btnCancel = wx.Button(self.panel, label='&Cancel')
         self.vBoxRight.Add(self.btnOK, 0)
@@ -201,22 +264,8 @@ class SetArticleFrame(BaseFrame):
         self.btnOK.Bind(wx.EVT_BUTTON, self.OnOK)
         self.btnCancel.Bind(wx.EVT_BUTTON, self.OnCancel)
 
-    def __init__(self, articleArgv=None, *args, **kwargs):
-        super(SetArticleFrame, self).__init__(style=wx.STAY_ON_TOP,
-                                               *args, **kwargs)
-        self.DrawSizersAndPanel()
-        self.DrawLeftSide(articleArgv)
-        self.DrawRightSide()
-
         if not articleArgv:
             self.btnOK.Disable()
-            self.btnClean.Disable()
-
-        self.SetSize((600, 600))
-        self.SetTitle(txt['AddArticleT'])
-        self.Centre()
-        self.urlText.SetFocus()
-        self.Show(True)
 
     def OnAutoRetrieve(self, e):
         mainFrame = self.GetParent()
@@ -225,12 +274,14 @@ class SetArticleFrame(BaseFrame):
             if ratio == '0.5':
                 self.article = self.url2Article(url=self.urlText.GetValue(),
                                                 issue=mainFrame.issue,
-                                                clean=False)
+                                                clean=False,
+                                                detectDuplicate=False)
             else:
                 self.article = self.url2Article(url=self.urlText.GetValue(),
                                                 issue=mainFrame.issue,
                                                 ratio=float(ratio),
-                                                clean=False)
+                                                clean=False,
+                                                detectDuplicate=False)
 
         except RuntimeError as err:
             try:
@@ -258,39 +309,62 @@ class SetArticleFrame(BaseFrame):
         if not self.article:
             return
 
-        self.btnOK.Enable()
-        self.btnClean.Enable()
         self.titleText.SetValue(self.article.title)
         self.mainText.SetValue(self.article.text)
+        self.authorText.SetValue(self.article.author)
 
     def OnOK(self, e):
         mainFrame = self.GetParent()
         if self.articleArgv:
             self.articleArgv.title = self.titleText.GetValue()
             self.articleArgv.text = self.mainText.GetValue()
+            self.articleArgv.url = self.urlText.GetValue()
+            self.articleArgv.ratio = self.ratioText.GetValue()  #TODO: clean up for in- and out- flow
+            self.articleArgv.portraitPath = self.portraitPath
             self.article = self.articleArgv  #Delete after parenting issues solved
         else:
             self.article.title = self.titleText.GetValue()
             self.article.text = self.mainText.GetValue()
+            self.article.portraitPath = self.portraitPath
+            self.article.ratio = self.ratioText.GetValue()  #TODO: clean up for in- and out- flow
             mainFrame.issue.addArticle(self.article)
-            mainFrame.articleList.Append(self.article.title)
+
         #TODO stop telling your parent what to do!
-        mainFrame.Enable()
         itemIndex = mainFrame.articleList.GetSelection()
-        mainFrame.articleList.SetString(itemIndex, self.article.title)
+        if self.articleArgv:
+            mainFrame.articleList.SetString(itemIndex, self.article.title)
+        else:
+            mainFrame.articleList.Append(self.article.title)
         mainFrame.updateInfoBar(itemIndex)
         mainFrame.updateTextBox()
         mainFrame.updateCatInfo()
+        mainFrame.Enable()
         self.Destroy()
 
     def OnCancel(self, e):
         self.Destroy()
         self.GetParent().Enable()
 
-    def OnCleanText(self, e):
-        text = self.mainText.GetValue()
-        text = cleanText(text)
-        self.mainText.SetValue(text)
+    def OnSetPortrait(self, e):
+        MAGIC_HEIGHT = 90.0
+        path = self.askPortraitPath()
+        if path:
+            img = wx.Image(path, wx.BITMAP_TYPE_ANY)
+            w, h = img.GetSize()
+            if h > MAGIC_HEIGHT:
+                w = w * MAGIC_HEIGHT / h
+                h = MAGIC_HEIGHT
+                img.Rescale(w, h)
+            img = img.ConvertToBitmap()
+            self.portraitBox.SetBitmap(img)
+            self.portraitPath = path
+
+    def OnTitleTextChange(self, e):
+        if self.titleText.GetValue():
+            self.btnOK.Enable()
+        else:
+            self.btnOK.Disable()
+
 
 class AddArticlesFrame(BaseFrame):
     """Window where user inputs a list of urls for downloading"""
@@ -700,7 +774,7 @@ class MainFrame(wx.Frame):
         if pos == -1:
             self.articleList.Insert(cat, 0)
         else:
-            self.articleList.Insert(cat, pos+1)
+            self.articleList.Insert(cat, pos)
         self.updateCatInfo()
 
     def OnCreateDoc(self, e):
@@ -736,16 +810,14 @@ class MainFrame(wx.Frame):
         self.updateInfoBar(itemIndex-1)
         self.updateCatInfo()
 
-        # On Windows, moving items does not trigger EVT_LISTBOX, which means
-        # OnArticleListClick would not run, leaving buttons inproperly
-        # enabled or disabled.
-        if os.name == 'nt':
-            self.btnUp.Enable(True)
-            self.btnDn.Enable(True)
-            if itemIndex - 1 == 0:
-                self.btnUp.Enable(False)
-            if itemIndex - 1 == self.articleList.GetCount() - 1:
-                self.btnDn.Enable(False)
+        # Incorporate this with OnModifyItemInfo? It break when moving
+        # a category.
+        self.btnUp.Enable(True)
+        self.btnDn.Enable(True)
+        if itemIndex - 1 == 0:
+            self.btnUp.Enable(False)
+        if itemIndex - 1 == self.articleList.GetCount() - 1:
+            self.btnDn.Enable(False)
 
     def OnDown(self, e):
         itemIndex = self.articleList.GetSelection()
@@ -773,23 +845,32 @@ class MainFrame(wx.Frame):
 
         self.updateInfoBar(itemIndex+1)
         self.updateCatInfo()
-        if os.name == 'nt':
-            self.btnUp.Enable(True)
-            self.btnDn.Enable(True)
-            if itemIndex+1 == 0:
-                self.btnUp.Enable(False)
-            if itemIndex+1 == self.articleList.GetCount() - 1:
-                self.btnDn.Enable(False)
+        self.btnUp.Enable(True)
+        self.btnDn.Enable(True)
+        if itemIndex+1 == 0:
+            self.btnUp.Enable(False)
+        if itemIndex+1 == self.articleList.GetCount() - 1:
+            self.btnDn.Enable(False)
 
     def OnModifyItemInfo(self, e):
         itemIndex = self.articleList.GetSelection()
-        article = self.getSelectedArticle()
-        SetArticleFrame(articleArgv=article,
-                        parent=self)
-        self.articleList.SetString(itemIndex, article.title)
-        self.updateInfoBar(itemIndex)
-        self.updateTextBox()
-        self.updateCatInfo()
+        item = self.articleList.GetStringSelection()
+        if _isCat(item):
+            cat = self.askInfo(txt['MdfCategoryQ'],
+                               txt['MdfCategoryT'],
+                               defaultVal=item[1:-1])
+            if cat is None:
+                return
+
+            # Update articleList box
+            cat = BRA_L + cat + BRA_R
+            self.articleList.SetString(itemIndex, cat)
+            self.updateCatInfo()
+        else:
+            article = self.getSelectedArticle()
+            SetArticleFrame(articleArgv=article,
+                            parent=self)
+            self.articleList.SetString(itemIndex, article.title)
 
     def OnDelete(self, e):
         itemIndex = self.articleList.GetSelection()
@@ -860,6 +941,8 @@ class MainFrame(wx.Frame):
 
     def OnArticleListClick(self, e):
 
+        if e.GetSelection() == -1:
+            return
         self.btnMdf.Enable(True)
         self.btnDel.Enable(True)
         self.btnUp.Enable(True)
@@ -884,8 +967,8 @@ class MainFrame(wx.Frame):
         updates subheadLines information of the selected article.
         """
 
-        #XXX For some weird reason, textBox.GetInsertionPoint is never -1.
-        #    When the focus is off, it's 0. 
+        #XXX For some reason, textBox.GetInsertionPoint is never -1, as
+        #    I would expect. When the focus is off, it's 0. 
 
         if ((self.textBox.GetInsertionPoint() == 0) or
             (self.articleList.GetSelection() == -1)):
@@ -901,19 +984,13 @@ class MainFrame(wx.Frame):
         article = self.getSelectedArticle()
 
         if line in article.subheadLines:
-            #UI action: dehighlight the line
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   ATTR_NORMAL)
-
-            #Backend action: remove subhead info 
             article.subheadLines.remove(line)
 
-        #line not in article.sbuheadLines, add info
         else:
-            #UI action: highlight the line
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   ATTR_HIGHLIGHT)
-            #Backend action: add subhead info 
             article.subheadLines.append(line)
 
     def OnToggleComment(self, e):
@@ -939,9 +1016,8 @@ class MainFrame(wx.Frame):
             return
 
         selectedArticle = self.getSelectedArticle()
-        if os.name == 'nt':
-            if selectedArticle is None:
-                return
+        if selectedArticle is None:
+            return
         title = selectedArticle.title
         author = selectedArticle.author
         authorBio = selectedArticle.authorBio
@@ -969,9 +1045,9 @@ class MainFrame(wx.Frame):
         for subhead in selectedArticle.subheadLines:
             leftMargin = text.find(subhead)
             rightMargin = leftMargin + len(subhead)
-            # Duct tape for text similar to one of the subs
+            #XXX Duct tape for text similar to one of the subs
             while (text[leftMargin-1] != '\n' or
-                   text[rightMargin] != '\n'):    # part of a paragraph
+                   text[rightMargin] != '\n'):    # not a standalone line 
                 leftMargin = text.find(subhead, rightMargin)
                 rightMargin = leftMargin + len(subhead)
             # End duct tape
@@ -987,15 +1063,13 @@ class MainFrame(wx.Frame):
             else:
                 for article in self.issue.articleList:
                     if article.title == item:
+                        article.category = cat
                         break
-                article.category = cat
 
     def askInfo(self, prompt, dialogTitle, defaultVal='',
                 multiline=False, noCancel=False):
-
-        """
-        Open a dialog and ask the user for information.
-        """
+        """ Open a dialog and ask the user for information.
+            Being replaced by separate frames.  """
 
         style = wx.OK
         if multiline:
@@ -1025,15 +1099,23 @@ class MainFrame(wx.Frame):
         print self.issue.issueNum
         print self.issue.grandTitle
         print self.issue.ediRemark
+        count = 1
         for article in self.issue:
+            print 'Aritlce No.' + str(count)
+            count += 1
             print article.title
             for sub in article.subheadLines:
                 print sub.encode('utf-8')
             print article.category
             print article.portraitPath
             print article.text
+            try:
+                print article.ratio
+            except:
+                print 'No ratio'
 
 def _isCat(title):
+    """Return if title is surrounded by square brackets"""
     return title.startswith(BRA_L) and title.endswith(BRA_R)
 
 def _main():

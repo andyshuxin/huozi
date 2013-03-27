@@ -1,8 +1,12 @@
 #coding=utf-8
 
 # AEP, Automatic E-magazine Processor, a set of modules that simulate
-# human action in fetching webpages, extracting main text and removing
-# unnecessary characters.
+# human action in the following procedures:
+#   fetching webpages,
+#   extracting main text,
+#   removing unnecessary characters,
+#   creating doc files.
+
 # Currenly, the modules are customized for production of 1510 Weekly.
 
 # Copyright (C) 2013 Shu Xin
@@ -109,8 +113,11 @@ class Issue(object):
         self.ediRemark = ediRemark
         self.articleList = []
 
-    def addArticle(self, article):
-        self.articleList.append(article)
+    def addArticle(self, article, pos=None):
+        if pos:
+            self.articleList[pos] = article
+        else:
+            self.articleList.append(article)
 
     def deleteArticle(self, article):
         self.articleList.remove(article)
@@ -319,7 +326,6 @@ def grab(url):
            return True
         return False
 
-    #url = urlClean(url)        # the step moved to huozi.py
     userAgent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; Huozi)'
     req = urllib2.Request(url, headers={'User-Agent': userAgent})
     opener = urllib2.build_opener(SmartRedirectHandler(),
@@ -462,13 +468,14 @@ def createDoc(issue):
         # Portrait
         if article.portraitPath:
             w, h = Image.open(article.portraitPath).size
-            if w > 120:
-                h = float(h) * (float(120) / float(w))
-                w = 120
+            MAGIC_WIDTH = 120.0
+            if w > MAGIC_HEIGHT:
+                h = h * MAGIC_WIDTH / w
+                w = MAGIC_WIDTH
             doc.Shapes.AddPicture(FileName=article.portraitPath,
                                   LinkToFile=False,
                                   SaveWithDocument=True,
-                                  Left=-140,
+                                  Left=-MAGIC_WIDTH-20,
                                   Width=w, Height=h,
                                   Anchor=anchor)
             top = h + 10
@@ -477,8 +484,8 @@ def createDoc(issue):
 
         # Bio
         textBox = doc.Shapes.AddTextbox(Orientation=1,
-                                        Left=-140 - 8, Top=top,
-                                        Width = 120 + 16, Height=120,
+                                        Left=-MAGIC_WIDTH - 20 - 8, Top=top,
+                                        Width = MAGIC_WIDTH + 16, Height=120,
                                         Anchor=anchor)
         textBox.Line.Visible = False   # Kill the border
         rng = textBox.TextFrame.TextRange
@@ -498,5 +505,4 @@ def createDoc(issue):
     #word.Application.Quit()
 
 if __name__ == '__main__':
-    from test import test
-    test()
+    pass
