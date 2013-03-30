@@ -15,3 +15,8 @@
 
 6. After one article is added, you can click the empty space in listbox, still the modify and delelete
    buttons are activated.
+
+7. When an article is selected, and use addarticle, the article in inserted to the end in data strcture,
+   but after the selected article in listbox.
+
+8. The first article has different portrait positioning, even it's the same article insertion code.

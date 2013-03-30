@@ -427,11 +427,11 @@ def createDoc(issue):
         rng.Style = win32.constants.wdStyleHeading2
 
         rng.Collapse( win32.constants.wdCollapseEnd )
-        portraitPos = rng.End
         rng.InsertAfter('\r\n')
 
         # Teaser
         rng.Collapse( win32.constants.wdCollapseEnd )
+        article.portraitPos = rng.End
         rng.Paste()
         rng.Find.Execute(FindText='[TEASER]', ReplaceWith=article.teaser)
         endPos = rng.End + 8  # move current position out of the table
@@ -468,11 +468,9 @@ def createDoc(issue):
         rng.Collapse( win32.constants.wdCollapseEnd )
         rng.InsertBreak( win32.constants.wdPageBreak )
 
-        count += 1
-
     ### Portraits and author's bio
     for article in issue:
-        anchor = doc.Range(portraitPos, portraitPos)
+        anchor = doc.Range(article.portraitPos, article.portraitPos)
 
         # Portrait
         if article.portraitPath:
@@ -498,7 +496,10 @@ def createDoc(issue):
         textBox.Line.Visible = False   # Kill the border
         rng = textBox.TextFrame.TextRange
         rng.Text = article.authorBio
+        rng.InsertAfter(str(count))
         rng.Style = win32.constants.wdStyleHeading5
+
+        count += 1
 
 
     ### Table of Contents
