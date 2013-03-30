@@ -420,20 +420,22 @@ def createDoc(issue):
 
         # Title
         rng.InsertAfter(str(articleCount) + '-' + str(count) + ' ')
+        count += 1
         if article.author:
             rng.InsertAfter(article.author + u'：' + article.title + '\r\n')
         else:
             rng.InsertAfter(article.title + '\r\n')
         rng.Style = win32.constants.wdStyleHeading2
-
         rng.Collapse( win32.constants.wdCollapseEnd )
-        rng.InsertAfter('\r\n')
+
 
         # Teaser
+        rng.InsertAfter('\r\n')
         rng.Collapse( win32.constants.wdCollapseEnd )
-        article.portraitPos = rng.End
+        article.portraitPos = rng.Start
         rng.Paste()
-        rng.Find.Execute(FindText='[TEASER]', ReplaceWith=article.teaser)
+        rng.Find.Execute(FindText='[TEASER]', ReplaceWith='')
+        rng.InsertAfter(article.teaser)  # Long teaser crashes Find.Execute()
         endPos = rng.End + 8  # move current position out of the table
         rng = doc.Range(endPos, endPos)
         rng.InsertAfter('\r\n')
@@ -469,8 +471,14 @@ def createDoc(issue):
         rng.InsertBreak( win32.constants.wdPageBreak )
 
     ### Portraits and author's bio
+    if DEBUG:
+        count = 1
     for article in issue:
-        anchor = doc.Range(article.portraitPos, article.portraitPos)
+        anchor = doc.Range()
+        anchor.Find.Execute(FindText=article.title)
+            #TODO: Add format condition to avoid accidental match
+        anchor.Collapse( win32.constants.wdCollapseEnd )
+        anchor = doc.Range(anchor.End+2, anchor.End+2)  # easier for positioning
 
         # Portrait
         if article.portraitPath:
@@ -481,8 +489,10 @@ def createDoc(issue):
             doc.Shapes.AddPicture(FileName=article.portraitPath,
                                   LinkToFile=False,
                                   SaveWithDocument=True,
-                                  Left=-MAGIC_WIDTH-20,
-                                  Width=w, Height=h,
+                                  Left=-MAGIC_WIDTH - 25,
+                                  Top=0,
+                                  Width=w,
+                                  Height=h,
                                   Anchor=anchor)
             top = h + 10
         else:
@@ -490,17 +500,18 @@ def createDoc(issue):
 
         # Bio
         textBox = doc.Shapes.AddTextbox(Orientation=1,
-                                        Left=-MAGIC_WIDTH - 20 - 8, Top=top,
-                                        Width = MAGIC_WIDTH + 16, Height=120,
+                                        Left=-MAGIC_WIDTH - 25 - 8,
+                                        Top=top,
+                                        Width=MAGIC_WIDTH + 16,
+                                        Height=120,
                                         Anchor=anchor)
         textBox.Line.Visible = False   # Kill the border
         rng = textBox.TextFrame.TextRange
         rng.Text = article.authorBio
-        rng.InsertAfter(str(count))
+        if DEBUG:
+            rng.InsertAfter(str(count))
+            count += 1
         rng.Style = win32.constants.wdStyleHeading5
-
-        count += 1
-
 
     ### Table of Contents
     rng = doc.Content
