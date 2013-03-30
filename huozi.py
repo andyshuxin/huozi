@@ -66,6 +66,7 @@ except IOError:
 
 #ATTR_NORMAL = wx.TextAttr("black", "white")      #Doesn't work on Win
 #ATTR_HIGHLIGHT = wx.TextAttr('black', 'yellow')
+MAGIC_HEIGHT = 90.0   # used in AddArticlesFrame, for portrait display
 
 class BaseFrame(wx.Frame):
 
@@ -154,6 +155,7 @@ class SetArticleFrame(BaseFrame):
             teaser =articleArgv.teaser
             ratio = articleArgv.ratio
             author = articleArgv.author
+            authorBio = articleArgv.authorBio
         else:  # New article
             self.article = Article()
             self.articleArgv = None
@@ -163,6 +165,7 @@ class SetArticleFrame(BaseFrame):
             teaser = ''
             ratio = '0.5'
             author = ''
+            authorBio = ''
 
         hintURL = wx.StaticText(self.panel, wx.ID_ANY, txt['URL'])
         self.vBoxLeft.Add(hintURL, 0)
@@ -209,8 +212,12 @@ class SetArticleFrame(BaseFrame):
                           flag=wx.EXPAND|wx.TOP, border=10)
         self.hintAuthor = wx.StaticText(self.panel, wx.ID_ANY, 'Author:')
         self.authorText = wx.TextCtrl(self.panel, value=author)
+        self.hintAuthorBio = wx.StaticText(self.panel, wx.ID_ANY, 'Author bio:')
+        self.authorBioText = wx.TextCtrl(self.panel, value=authorBio)
         self.authorInfoSizer.Add(self.hintAuthor, 0)
         self.authorInfoSizer.Add(self.authorText, 0)
+        self.authorInfoSizer.Add(self.hintAuthorBio, 0)
+        self.authorInfoSizer.Add(self.authorBioText, 1, flag=wx.EXPAND)
 
         #Portrait block
         self.portraitBox = wx.StaticBitmap(self.panel, wx.ID_ANY,
@@ -219,7 +226,21 @@ class SetArticleFrame(BaseFrame):
         self.btnSetPortrait.Bind(wx.EVT_BUTTON, self.OnSetPortrait)
         self.vBoxLeft.Add(self.portraitBox, 0, flag=wx.TOP, border=10)
         self.vBoxLeft.Add(self.btnSetPortrait, 0)
-        self.portraitPath = ''
+        if self.articleArgv:
+            if self.articleArgv.portraitPath:
+                # TODO: modulize
+                path = self.articleArgv.portraitPath
+                img = wx.Image(path, wx.BITMAP_TYPE_ANY)
+                w, h = img.GetSize()
+                if h > MAGIC_HEIGHT:
+                    w = w * MAGIC_HEIGHT / h
+                    h = MAGIC_HEIGHT
+                    img.Rescale(w, h)
+                img = img.ConvertToBitmap()
+                self.portraitBox.SetBitmap(img)
+                self.portraitPath = path
+        else:
+            self.portraitPath = ''
 
 
     def DrawRightSide(self, articleArgv):
@@ -283,6 +304,9 @@ class SetArticleFrame(BaseFrame):
         mainFrame = self.GetParent()
         index = mainFrame.articleList.GetSelection()
 
+        url = self.urlText.GetValue()
+        self.urlText.SetValue(urlClean(url))
+
         # Inner data structure
         if self.articleArgv:
             self.articleArgv.title = self.titleText.GetValue()
@@ -290,13 +314,20 @@ class SetArticleFrame(BaseFrame):
             self.articleArgv.teaser = self.teaserText.GetValue()
             self.articleArgv.url = self.urlText.GetValue()
             self.articleArgv.ratio = self.ratioText.GetValue()  #TODO: clean up for in- and out- flow
-            self.articleArgv.portraitPath = self.portraitPath
+            self.articleArgv.author = self.authorText.GetValue()
+            self.articleArgv.authorBio = self.authorBioText.GetValue()
+            if hasattr(self, 'portraitPath'):
+                self.articleArgv.portraitPath = self.portraitPath
             self.article = self.articleArgv  #Delete after parenting issues solved
         else:
             self.article.title = self.titleText.GetValue()
             self.article.text = self.mainText.GetValue()
             self.article.teaser = self.teaserText.GetValue()
-            self.article.portraitPath = self.portraitPath
+            self.article.author = self.authorText.GetValue()
+            self.article.authorBio = self.authorBioText.GetValue()
+            if hasattr(self, 'portraitPath'):
+                self.article.portraitPath = self.portraitPath
+            self.article.url = self.urlText.GetValue()
             self.article.ratio = self.ratioText.GetValue()  #TODO: clean up for in- and out- flow
             mainFrame.issue.addArticle(self.article, index)
 
@@ -319,7 +350,6 @@ class SetArticleFrame(BaseFrame):
         self.GetParent().Enable()
 
     def OnSetPortrait(self, e):
-        MAGIC_HEIGHT = 90.0
         path = self.askPortraitPath()
         if path:
             img = wx.Image(path, wx.BITMAP_TYPE_ANY)
@@ -331,6 +361,7 @@ class SetArticleFrame(BaseFrame):
             img = img.ConvertToBitmap()
             self.portraitBox.SetBitmap(img)
             self.portraitPath = path
+        self.Raise()
 
     def OnTitleTextChange(self, e):
         if self.titleText.GetValue():
@@ -826,6 +857,8 @@ class MainFrame(wx.Frame):
 
     def OnModifyItemInfo(self, e):
         index = self.articleList.GetSelection()
+        if index == -1:
+            return
         item = self.articleList.GetStringSelection()
         if _isCat(item):
             cat = self.askInfo(txt['MdfCategoryQ'],
@@ -846,6 +879,8 @@ class MainFrame(wx.Frame):
 
     def OnDelete(self, e):
         index = self.articleList.GetSelection()
+        if index == -1:
+            return
         selectedTitle = self.articleList.GetString(index)
 
         if not _isCat(selectedTitle):
@@ -887,7 +922,6 @@ class MainFrame(wx.Frame):
         self.btnSave.Enable(True)
 
     def OnSaveEdit(self, e):
-
         for tool in (self.articleList, self.btnAddArticle, self.btnAddArticles,
                      self.btnAddCategory, self.btnDel, self.btnUp, self.btnDn,
                      self.btnMdf):
@@ -1017,11 +1051,13 @@ class MainFrame(wx.Frame):
             leftMargin = text.find(subhead)
             rightMargin = leftMargin + len(subhead)
             #XXX Duct tape for text similar to one of the subs
-            if leftMargin != 0 and rightMargin != len(text):
-                while (text[leftMargin-1] != '\n' or
-                       text[rightMargin] != '\n'):    # not a standalone line 
-                    leftMargin = text.find(subhead, rightMargin)
-                    rightMargin = leftMargin + len(subhead)
+            while (text[leftMargin-1] != '\n' or
+                   text[rightMargin] != '\n'):    # not a standalone line 
+                if (leftMargin == 0 or rightMargin == len(text) or
+                    leftMargin == -1 or rightMargin == -1):
+                       return
+                leftMargin = text.find(subhead, rightMargin)
+                rightMargin = leftMargin + len(subhead)
             # End duct tape
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   wx.TextAttr('black', 'yellow'))
@@ -1075,8 +1111,8 @@ class MainFrame(wx.Frame):
         count = 1
         for article in self.issue:
             print '\r\n' + 'Aritlce No.' + str(count)
-            count += 1
             print 'title: ', article.title
+            print 'url:', article.url
             for sub in article.subheadLines:
                 print 'subs: ', sub.encode('utf-8')
             print 'category: ', article.category
@@ -1087,6 +1123,7 @@ class MainFrame(wx.Frame):
                 print 'ratio =', article.ratio
             except:
                 print 'No ratio'
+            count += 1
 
 def _isCat(title):
     """Return if title is surrounded by square brackets"""
