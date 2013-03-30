@@ -781,7 +781,19 @@ class MainFrame(wx.Frame):
         self.updateCatInfo()
 
     def OnCreateDoc(self, e):
+        # Backup clipboard
+        if not wx.TheClipboard.IsOpened():
+            wx.TheClipboard.Open()
+            cp = wx.TextDataObject()
+            hasCP = wx.TheClipboard.GetData(cp)
+            wx.TheClipboard.Close()
         createDoc(self.issue)
+        # Restore clipboard
+        if hasCP and not wx.TheClipboard.IsOpened():
+            wx.TheClipboard.Open()
+            wx.TheClipboard.SetData(cp)
+            print 'set!'
+            wx.TheClipboard.Close()
 
     def OnQuit(self, e):
         self.Close()

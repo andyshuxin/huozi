@@ -19,12 +19,14 @@ import sys
 import os
 import string
 import urllib2
+import wx
 from PIL import Image
 from datetime import date, timedelta
 from ExtMainText import extMainText
 from ExtMainText import get_text
 try:
     import win32com.client as win32
+    import win32clipboard
     hasPyWin = True
 except ImportError:
     hasPyWin = False
@@ -362,9 +364,22 @@ def grab(url):
 ##### .doc Export module #####
 
 def createDoc(issue):
+    try:
+        _createDoc(issue)
+    except:
+        print 'Shit happened'
+    finally:
+        # createDoc screws clipboard. better to clear it.
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        win32clipboard.CloseClipboard()
+
+def _createDoc(issue):
+    """Polutes clipboard! Use with caution!"""
 
     word = win32.gencache.EnsureDispatch('Word.Application')
     doc = word.Documents.Open(os.getcwd() + r'\template.dot')
+
 
     ##### Add contents #####
 
@@ -518,11 +533,13 @@ def createDoc(issue):
     rng.Find.Execute(FindText='[TOC]', ReplaceWith='')
     doc.TablesOfContents.Add(doc.Range(rng.End, rng.End), True, 1, 2)
 
+
     # Finalizing
     doc.SaveAs(FileName=(os.getcwd() + '\\' + fullTitle),
                FileFormat=win32.constants.wdFormatDocument)
     word.Visible = True
     #word.Application.Quit()
+
 
 if __name__ == '__main__':
     from test import test

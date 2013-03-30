@@ -20,3 +20,5 @@
    but after the selected article in listbox.
 
 8. The first article has different portrait positioning, even it's the same article insertion code.
+
+9. Use createDoc empties the memory
