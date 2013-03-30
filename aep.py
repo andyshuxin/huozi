@@ -11,7 +11,7 @@
 
 # Copyright (C) 2013 Shu Xin
 
-__version__ = '0.04'
+__version__ = '0.05'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
@@ -380,7 +380,6 @@ def _createDoc(issue):
     word = win32.gencache.EnsureDispatch('Word.Application')
     doc = word.Documents.Open(os.getcwd() + r'\template.dot')
 
-
     ##### Add contents #####
 
     ## Cover page
@@ -486,8 +485,6 @@ def _createDoc(issue):
         rng.InsertBreak( win32.constants.wdPageBreak )
 
     ### Portraits and author's bio
-    if DEBUG:
-        count = 1
     for article in issue:
         anchor = doc.Range()
         anchor.Find.Execute(FindText=article.title)
@@ -504,7 +501,7 @@ def _createDoc(issue):
             doc.Shapes.AddPicture(FileName=article.portraitPath,
                                   LinkToFile=False,
                                   SaveWithDocument=True,
-                                  Left=-MAGIC_WIDTH - 25,
+                                  Left=-MAGIC_WIDTH - 27,
                                   Top=0,
                                   Width=w,
                                   Height=h,
@@ -515,17 +512,18 @@ def _createDoc(issue):
 
         # Bio
         textBox = doc.Shapes.AddTextbox(Orientation=1,
-                                        Left=-MAGIC_WIDTH - 25 - 8,
+                                        Left=-MAGIC_WIDTH - 27,
                                         Top=top,
-                                        Width=MAGIC_WIDTH + 16,
+                                        Width=MAGIC_WIDTH,
                                         Height=120,
                                         Anchor=anchor)
-        textBox.Line.Visible = False   # Kill the border
+        textBox.Line.Visible = False
+        textBox.TextFrame.MarginBottom = 0
+        textBox.TextFrame.MarginTop = 0
+        textBox.TextFrame.MarginLeft = 0
+        textBox.TextFrame.MarginRight = 0
         rng = textBox.TextFrame.TextRange
         rng.Text = article.authorBio
-        if DEBUG:
-            rng.InsertAfter(str(count))
-            count += 1
         rng.Style = win32.constants.wdStyleHeading5
 
     ### Table of Contents

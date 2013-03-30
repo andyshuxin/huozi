@@ -40,7 +40,7 @@
 #   Layout designed by Pan Wenyi, Co-China Forum. Text by Co-China Forum.
 #   Copyrighted and not distributed under GPL.
 
-__version__ = 'M/S G'
+__version__ = 'M/S H'
 from aep import __version__ as __aepversion__
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
@@ -59,8 +59,6 @@ try:
     DEBUG = True
 except IOError:
     DEBUG = False
-
-
 
 #####  UI  #####
 
