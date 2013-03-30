@@ -52,6 +52,7 @@ from aep import (Article, Issue,
                  urlClean, grab, analyseHTML, cleanText, createDoc,
                  BRA_L, BRA_R
                 )
+from text import txt
 
 try:
     with open('DEBUG'): pass
@@ -60,52 +61,11 @@ except IOError:
     DEBUG = False
 
 
-####  text  ####
-
-txt = {'issueNumT':     "Issue Number",
-       'issueNumQ':     "What's the number of issue?",
-       'grandTitleT':   "General Title",
-       'grandTitleQ':   "What's the general title of the issue?",
-       'ediRemarkT':    "Editor's Remarks",
-       'ediRemarkQ':    "What are the editor's remarks?",
-       'AddArticlesT':  "Add Articles",
-       'AddArticlesQ':  "URLs to the articles (one each line):",
-       'URL':           "Set the URL to the article",
-       'AddArticleT':   "Add Article",
-       'AddCategoryT':  "Add Category",
-       'AddCategoryQ':  "Name of the category:",
-       'MdfCategoryT':  "Change Category",
-       'MdfCategoryQ':  "Name of the category:",
-       'MdfTitleT':     "Article Title",
-       'MdfTitleQ':     "What's the article's title?",
-       'MainTextHint':  "Preview of the main text(please avoid editing here):",
-       'MdfCategoryT':  "Category",
-       'MdfCategoryQ':  "Name of the category:",
-       'MdfAuthorT':    "Author",
-       'MdfAuthorQ':    "What's the article's author?",
-       'MdfAuthorBioT': "Author Bio",
-       'MdfAuthorBioQ': "What's the introduction to the author?",
-       'PortraitT':     "Select Portrait File for the Author.",
-       'DelArticle':    "Delete ",
-       'graberror':     "Something is wrong grabbing ",
-       'graberrorCap':  "Grabber Error",
-       'duplicate':     "Already added the article: ",
-       'duplicateCap':  "Duplicate article",
-       'tglSubhead':    "Toggle sub&headline",
-       'configIssueH':  "Configure the issue",
-       'addArticleH':   "Add a set of articles",
-       'getDocH':       "Produce doc file",
-       'quitH':         "Quit",
-       'AboutH':        "About",
-       'issueNo':       "Issue no.",
-       'articleNo':     "Total number of articles: ",
-       'emptyContent':  "The webpage has too little textual content.",
-       }
 
 #####  UI  #####
 
-ATTR_NORMAL = wx.TextAttr("black", "white")
-ATTR_HIGHLIGHT = wx.TextAttr('black', 'yellow')
+#ATTR_NORMAL = wx.TextAttr("black", "white")      #Doesn't work on Win
+#ATTR_HIGHLIGHT = wx.TextAttr('black', 'yellow')
 
 class BaseFrame(wx.Frame):
 
@@ -153,8 +113,7 @@ class BaseFrame(wx.Frame):
 class SetArticleFrame(BaseFrame):
 
     def __init__(self, articleArgv=None, *args, **kwargs):
-        super(SetArticleFrame, self).__init__(style=wx.STAY_ON_TOP,
-                                               *args, **kwargs)
+        super(SetArticleFrame, self).__init__(*args, **kwargs)
 
         self.DrawSizersAndPanel()
         self.DrawLeftSide(articleArgv)
@@ -192,6 +151,7 @@ class SetArticleFrame(BaseFrame):
             url = articleArgv.url
             title = articleArgv.title
             text = articleArgv.text
+            teaser =articleArgv.teaser
             ratio = articleArgv.ratio
             author = articleArgv.author
         else:  # New article
@@ -200,6 +160,7 @@ class SetArticleFrame(BaseFrame):
             url = ''
             title = ''
             text = ''
+            teaser = ''
             ratio = '0.5'
             author = ''
 
@@ -209,10 +170,10 @@ class SetArticleFrame(BaseFrame):
         # URL block
         urlSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.urlText = wx.TextCtrl(self.panel, value=url)
-        self.hintRatio = wx.StaticText(self.panel, wx.ID_ANY, u'Threshold:',)
+        self.hintRatio = wx.StaticText(self.panel, wx.ID_ANY, txt['ratioH'])
         self.ratioText = wx.TextCtrl(self.panel, value=ratio,
                                      size=(40,10))
-        self.btnAutoRetrieve = wx.Button(self.panel, label='&Auto retrieve')
+        self.btnAutoRetrieve = wx.Button(self.panel, label=txt['btnAutoRet'])
         urlSizer.Add(self.urlText, 1, flag=wx.EXPAND)
         urlSizer.Add(self.hintRatio, 0, flag=wx.EXPAND)
         urlSizer.Add(self.ratioText, 0, flag=wx.EXPAND)
@@ -226,15 +187,21 @@ class SetArticleFrame(BaseFrame):
         self.titleText = wx.TextCtrl(self.panel, value=title,)
         self.titleText.Bind(wx.EVT_TEXT, self.OnTitleTextChange)
 
-        hintMainText = wx.StaticText(self.panel, wx.ID_ANY,
-                                     txt['MainTextHint'])
+        self.hintMainText = wx.StaticText(self.panel, wx.ID_ANY,
+                                     txt['MainTextH'])
         self.mainText = wx.TextCtrl(self.panel, value=text,
                                     style=wx.TE_BESTWRAP|wx.TE_MULTILINE)
+        self.hintTeaserText = wx.StaticText(self.panel, wx.ID_ANY,
+                                          txt['TeaserTextH'])
+        self.teaserText = wx.TextCtrl(self.panel, value=teaser,
+                                      style=wx.TE_BESTWRAP|wx.TE_MULTILINE)
         self.vBoxLeft.Add(hintTitle, 0, wx.TOP, border=10)
         self.vBoxLeft.Add(self.titleText, 0, wx.BOTTOM|wx.EXPAND,
                      border=10)
-        self.vBoxLeft.Add(hintMainText, 0, wx.TOP, border=10)
-        self.vBoxLeft.Add(self.mainText, 1, flag=wx.EXPAND)
+        self.vBoxLeft.Add(self.hintMainText, 0, wx.TOP, border=10)
+        self.vBoxLeft.Add(self.mainText, 1, flag=wx.TOP|wx.EXPAND, border=10)
+        self.vBoxLeft.Add(self.hintTeaserText, 0, wx.TOP, border=10)
+        self.vBoxLeft.Add(self.teaserText, 0, wx.TOP|wx.EXPAND, border=10)
 
         # Author block
         self.authorInfoSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -254,7 +221,6 @@ class SetArticleFrame(BaseFrame):
         self.vBoxLeft.Add(self.btnSetPortrait, 0)
         self.portraitPath = ''
 
-        #self.panel.Layout()
 
     def DrawRightSide(self, articleArgv):
         self.btnOK = wx.Button(self.panel, label='&OK!')
@@ -315,9 +281,13 @@ class SetArticleFrame(BaseFrame):
 
     def OnOK(self, e):
         mainFrame = self.GetParent()
+        index = mainFrame.articleList.GetSelection()
+
+        # Inner data structure
         if self.articleArgv:
             self.articleArgv.title = self.titleText.GetValue()
             self.articleArgv.text = self.mainText.GetValue()
+            self.articleArgv.teaser = self.teaserText.GetValue()
             self.articleArgv.url = self.urlText.GetValue()
             self.articleArgv.ratio = self.ratioText.GetValue()  #TODO: clean up for in- and out- flow
             self.articleArgv.portraitPath = self.portraitPath
@@ -325,17 +295,20 @@ class SetArticleFrame(BaseFrame):
         else:
             self.article.title = self.titleText.GetValue()
             self.article.text = self.mainText.GetValue()
+            self.article.teaser = self.teaserText.GetValue()
             self.article.portraitPath = self.portraitPath
             self.article.ratio = self.ratioText.GetValue()  #TODO: clean up for in- and out- flow
-            mainFrame.issue.addArticle(self.article)
+            mainFrame.issue.addArticle(self.article, index)
 
         #TODO stop telling your parent what to do!
-        itemIndex = mainFrame.articleList.GetSelection()
+        # Interface article list
         if self.articleArgv:
-            mainFrame.articleList.SetString(itemIndex, self.article.title)
+            mainFrame.articleList.SetString(index, self.article.title)
+        elif index != -1:
+            mainFrame.articleList.Insert(self.article.title, index+1)
         else:
             mainFrame.articleList.Append(self.article.title)
-        mainFrame.updateInfoBar(itemIndex)
+        mainFrame.updateInfoBar(index)
         mainFrame.updateTextBox()
         mainFrame.updateCatInfo()
         mainFrame.Enable()
@@ -370,8 +343,7 @@ class AddArticlesFrame(BaseFrame):
     """Window where user inputs a list of urls for downloading"""
 
     def __init__(self, *args, **kwargs):
-        super(AddArticlesFrame, self).__init__(style=wx.STAY_ON_TOP,
-                                               *args, **kwargs)
+        super(AddArticlesFrame, self).__init__(*args, **kwargs)
         self.hBox = wx.BoxSizer(wx.HORIZONTAL)
         self.vBox1 = wx.BoxSizer(wx.VERTICAL)
         self.vBox2 = wx.BoxSizer(wx.VERTICAL)
@@ -550,16 +522,16 @@ class MainFrame(wx.Frame):
         infoBarBox = wx.BoxSizer(wx.VERTICAL)
         self.infoBar1 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
-                                style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+                                style=wx.ALIGN_LEFT)
         self.infoBar2 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
-                                style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+                                style=wx.ALIGN_LEFT)
         self.infoBar3 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
-                                style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+                                style=wx.ALIGN_LEFT)
         self.infoBar4 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
-                                style=wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+                                style=wx.ALIGN_LEFT)
 
         infoBarBox.Add(self.infoBar1, 0,
                        flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
@@ -784,16 +756,16 @@ class MainFrame(wx.Frame):
         self.Close()
 
     def OnUp(self, e):
-        itemIndex = self.articleList.GetSelection()
+        index = self.articleList.GetSelection()
 
         # Swap display
-        if itemIndex != 0:
-            selectedTitle = self.articleList.GetString(itemIndex)
-            swappedTitle = self.articleList.GetString(itemIndex-1)
-            self.articleList.Delete(itemIndex)
-            self.articleList.Insert(selectedTitle, itemIndex-1)
-            self.articleList.Select(itemIndex-1)
-            if itemIndex == 1:
+        if index != 0:
+            selectedTitle = self.articleList.GetString(index)
+            swappedTitle = self.articleList.GetString(index-1)
+            self.articleList.Delete(index)
+            self.articleList.Insert(selectedTitle, index-1)
+            self.articleList.Select(index-1)
+            if index == 1:
                 self.btnUp.Enable(False)
 
         # Swap storage order
@@ -807,29 +779,29 @@ class MainFrame(wx.Frame):
             al = self.issue.articleList
             al[artNo1], al[artNo2] = al[artNo2], al[artNo1]
 
-        self.updateInfoBar(itemIndex-1)
+        self.updateInfoBar(index-1)
         self.updateCatInfo()
 
         # Incorporate this with OnModifyItemInfo? It break when moving
         # a category.
         self.btnUp.Enable(True)
         self.btnDn.Enable(True)
-        if itemIndex - 1 == 0:
+        if index - 1 == 0:
             self.btnUp.Enable(False)
-        if itemIndex - 1 == self.articleList.GetCount() - 1:
+        if index - 1 == self.articleList.GetCount() - 1:
             self.btnDn.Enable(False)
 
     def OnDown(self, e):
-        itemIndex = self.articleList.GetSelection()
+        index = self.articleList.GetSelection()
 
         # Swap display
-        if itemIndex != self.articleList.GetCount() - 1:
-            selectedTitle = self.articleList.GetString(itemIndex)
-            swappedTitle = self.articleList.GetString(itemIndex+1)
-            self.articleList.Delete(itemIndex)
-            self.articleList.Insert(selectedTitle, itemIndex+1)
-            self.articleList.Select(itemIndex+1)
-            if itemIndex == self.articleList.GetCount() - 2:
+        if index != self.articleList.GetCount() - 1:
+            selectedTitle = self.articleList.GetString(index)
+            swappedTitle = self.articleList.GetString(index+1)
+            self.articleList.Delete(index)
+            self.articleList.Insert(selectedTitle, index+1)
+            self.articleList.Select(index+1)
+            if index == self.articleList.GetCount() - 2:
                 self.btnDn.Enable(False)
 
         # Swap storage order
@@ -843,17 +815,17 @@ class MainFrame(wx.Frame):
             al = self.issue.articleList
             al[artNo1], al[artNo2] = al[artNo2], al[artNo1]
 
-        self.updateInfoBar(itemIndex+1)
+        self.updateInfoBar(index+1)
         self.updateCatInfo()
         self.btnUp.Enable(True)
         self.btnDn.Enable(True)
-        if itemIndex+1 == 0:
+        if index+1 == 0:
             self.btnUp.Enable(False)
-        if itemIndex+1 == self.articleList.GetCount() - 1:
+        if index+1 == self.articleList.GetCount() - 1:
             self.btnDn.Enable(False)
 
     def OnModifyItemInfo(self, e):
-        itemIndex = self.articleList.GetSelection()
+        index = self.articleList.GetSelection()
         item = self.articleList.GetStringSelection()
         if _isCat(item):
             cat = self.askInfo(txt['MdfCategoryQ'],
@@ -864,17 +836,17 @@ class MainFrame(wx.Frame):
 
             # Update articleList box
             cat = BRA_L + cat + BRA_R
-            self.articleList.SetString(itemIndex, cat)
+            self.articleList.SetString(index, cat)
             self.updateCatInfo()
         else:
             article = self.getSelectedArticle()
             SetArticleFrame(articleArgv=article,
                             parent=self)
-            self.articleList.SetString(itemIndex, article.title)
+            self.articleList.SetString(index, article.title)
 
     def OnDelete(self, e):
-        itemIndex = self.articleList.GetSelection()
-        selectedTitle = self.articleList.GetString(itemIndex)
+        index = self.articleList.GetSelection()
+        selectedTitle = self.articleList.GetString(index)
 
         if not _isCat(selectedTitle):
             dlgYesNo = wx.MessageDialog(None,
@@ -885,7 +857,7 @@ class MainFrame(wx.Frame):
             selectedArticle = self.getSelectedArticle()
             self.issue.deleteArticle(selectedArticle)
 
-        self.articleList.Delete(itemIndex)
+        self.articleList.Delete(index)
 
         for button in (self.btnUp, self.btnDn, self.btnMdf, self.btnDel,
                        self.btnSubhead, self.btnComment, self.btnEdit,
@@ -985,12 +957,12 @@ class MainFrame(wx.Frame):
 
         if line in article.subheadLines:
             self.textBox.SetStyle(leftMargin, rightMargin,
-                                  ATTR_NORMAL)
+                                  wx.TextAttr("black", "white"))
             article.subheadLines.remove(line)
 
         else:
             self.textBox.SetStyle(leftMargin, rightMargin,
-                                  ATTR_HIGHLIGHT)
+                                  wx.TextAttr('black', 'yellow'))
             article.subheadLines.append(line)
 
     def OnToggleComment(self, e):
@@ -1002,7 +974,7 @@ class MainFrame(wx.Frame):
     def updateInfoBar(self, index):
 
         # Issue info
-        issueInfo = (txt['issueNo'] + str(self.issue.issueNum) + ' ' +
+        issueInfo = (txt['issueNoH'] + str(self.issue.issueNum) + ' ' +
                      self.issue.grandTitle + ' ' +
                      txt['articleNo'] + str(len(self.issue.articleList))
                     )
@@ -1034,24 +1006,25 @@ class MainFrame(wx.Frame):
             return
 
         index = self.articleList.GetSelection()
-
         selectedArticle = self.getSelectedArticle()
         self.textBox.SetValue(selectedArticle.text)
 
         selectedTitle = self.articleList.GetString(index)
 
-        # Hilight subs
+        # Highlight subs
         text = self.textBox.GetValue()
         for subhead in selectedArticle.subheadLines:
             leftMargin = text.find(subhead)
             rightMargin = leftMargin + len(subhead)
             #XXX Duct tape for text similar to one of the subs
-            while (text[leftMargin-1] != '\n' or
-                   text[rightMargin] != '\n'):    # not a standalone line 
-                leftMargin = text.find(subhead, rightMargin)
-                rightMargin = leftMargin + len(subhead)
+            if leftMargin != 0 and rightMargin != len(text):
+                while (text[leftMargin-1] != '\n' or
+                       text[rightMargin] != '\n'):    # not a standalone line 
+                    leftMargin = text.find(subhead, rightMargin)
+                    rightMargin = leftMargin + len(subhead)
             # End duct tape
-            self.textBox.SetStyle(leftMargin, rightMargin, ATTR_HIGHLIGHT)
+            self.textBox.SetStyle(leftMargin, rightMargin,
+                                  wx.TextAttr('black', 'yellow'))
 
 
     def updateCatInfo(self):
@@ -1101,16 +1074,17 @@ class MainFrame(wx.Frame):
         print self.issue.ediRemark
         count = 1
         for article in self.issue:
-            print 'Aritlce No.' + str(count)
+            print '\r\n' + 'Aritlce No.' + str(count)
             count += 1
-            print article.title
+            print 'title: ', article.title
             for sub in article.subheadLines:
-                print sub.encode('utf-8')
-            print article.category
-            print article.portraitPath
-            print article.text
+                print 'subs: ', sub.encode('utf-8')
+            print 'category: ', article.category
+            print 'portraitPath: ', article.portraitPath
+            print 'main text: ', article.text
+            print 'teaser: ', article.teaser
             try:
-                print article.ratio
+                print 'ratio =', article.ratio
             except:
                 print 'No ratio'
 

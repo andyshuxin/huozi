@@ -68,20 +68,22 @@ AUTHORMARKERS = (u'作者:', u'文:', u'作者：', u'文：')
 
 PUNCTUATIONS = (',', '.', ':', ')', u'，', u'。', u'：', u'）')
 
-BRA_L = u'【'
-BRA_R = u'】'
+BRA_L, BRA_R = u'【', u'】'
+
+MAGIC_WIDTH = 120.0   # useful in portrait positioning
 
 #####  Data strcture  #####
 
 class Article(object):
 
-    def __init__(self, title='', author='', authorBio='', text='',
+    def __init__(self, title='', author='', authorBio='', text='', teaser='',
                  subheadLines=[], comments=[], category = '',
                  portraitPath='', url='', urlAlt=''):
         self.title = title
         self.author = author
         self.authorBio = authorBio
         self.text = text
+        self.teaser = teaser
         self.subheadLines = subheadLines
         self.comments = comments
         self.category = category
@@ -114,10 +116,9 @@ class Issue(object):
         self.articleList = []
 
     def addArticle(self, article, pos=None):
-        if pos:
-            self.articleList[pos] = article
-        else:
-            self.articleList.append(article)
+        if pos is None or pos == -1:
+            pos = len(self.articleList)
+        self.articleList.insert(pos, article)
 
     def deleteArticle(self, article):
         self.articleList.remove(article)
@@ -385,8 +386,8 @@ def createDoc(issue):
             break
     year, month, day = pubDay.timetuple()[:3]
     pubDayS = str(year) + u'年' + str(month) + u'月' + str(day) + u'日'
-    fullTitle = (u'一五一十周刊第' + issue.issueNum + u'期' +
-                 u'：' + issue.grandTitle)
+    fullTitle = (u'第' + issue.issueNum + u'期' +
+                 ' ' + issue.grandTitle)
 
     C = win32.constants.wdHeaderFooterPrimary
     doc.Sections(1).Headers(C).Range.InsertAfter(pubDayS + ' ' + fullTitle +
@@ -395,6 +396,11 @@ def createDoc(issue):
     # No title for contents page
     doc.Sections(3).Headers(C).Range.InsertAfter(pubDayS + ' ' + fullTitle +
                                                  '\r\n' * 2)
+
+    # Copy teaser
+    docTeaser = word.Documents.Open(os.getcwd() + r'\teaser.dot')
+    docTeaser.Tables(1).Range.Copy()
+    docTeaser.Close()
 
     ## Add articles
     rng = doc.Content
@@ -414,39 +420,42 @@ def createDoc(issue):
 
         # Title
         rng.InsertAfter(str(articleCount) + '-' + str(count) + ' ')
-        posA, posB = rng.Start, rng.End
-        rng.InsertAfter(article.author + u'：' + article.title + '\r\n')
+        if article.author:
+            rng.InsertAfter(article.author + u'：' + article.title + '\r\n')
+        else:
+            rng.InsertAfter(article.title + '\r\n')
         rng.Style = win32.constants.wdStyleHeading2
 
-        rngOrder = doc.Range(posA, posB)
-        rngOrder.Font.Size = 24
-        rngOrder.Font.Name = u'黑体'
-
         rng.Collapse( win32.constants.wdCollapseEnd )
-
-        # Gray Bar
-        rng.InsertAfter('_' * 50)
+        portraitPos = rng.End
         rng.InsertAfter('\r\n')
-        rng.Style = "GreyBar"
-        rng.HighlightColorIndex = 16
+
+        # Teaser
         rng.Collapse( win32.constants.wdCollapseEnd )
-        article.textPos = rng.End+10    #XXX Magic number, somehow works(?)
+        rng.Paste()
+        rng.Find.Execute(FindText='[TEASER]', ReplaceWith=article.teaser)
+        endPos = rng.End + 8  # move current position out of the table
+        rng = doc.Range(endPos, endPos)
+        rng.InsertAfter('\r\n')
+        rng.Collapse( win32.constants.wdCollapseEnd )
 
         # Main text
         for line in article.text.splitlines():
             rng.Collapse( win32.constants.wdCollapseEnd )
-            rng.InsertAfter(line+'\r\n')
+            rng.InsertAfter(line + '\r\n')
             rng.Style = win32.constants.wdStyleNormal
             if line in article.subheadLines:
                 rng.Style = win32.constants.wdStyleHeading3
+        rng.InsertAfter('\r\n')
         rng.Collapse( win32.constants.wdCollapseEnd )
 
         # Original URL and Back To Contents
-        tokenLink = u'【原文链接】'
-        pos = rng.End
-        rng.InsertAfter(tokenLink + ' '*4)
-        rngLink = doc.Range(pos, pos+len(tokenLink))
-        doc.Hyperlinks.Add(Anchor=rngLink, Address=article.url)
+        if article.url:
+            tokenLink = u'【原文链接】'
+            pos = rng.End
+            rng.InsertAfter(tokenLink + ' '*4)
+            rngLink = doc.Range(pos, pos+len(tokenLink))
+            doc.Hyperlinks.Add(Anchor=rngLink, Address=article.url)
 
         tokenLink = u'【回到目录】'
         pos = rng.End
@@ -463,13 +472,12 @@ def createDoc(issue):
 
     ### Portraits and author's bio
     for article in issue:
-        anchor = doc.Range(article.textPos, article.textPos)
+        anchor = doc.Range(portraitPos, portraitPos)
 
         # Portrait
         if article.portraitPath:
             w, h = Image.open(article.portraitPath).size
-            MAGIC_WIDTH = 120.0
-            if w > MAGIC_HEIGHT:
+            if w > MAGIC_WIDTH:
                 h = h * MAGIC_WIDTH / w
                 w = MAGIC_WIDTH
             doc.Shapes.AddPicture(FileName=article.portraitPath,
@@ -505,4 +513,5 @@ def createDoc(issue):
     #word.Application.Quit()
 
 if __name__ == '__main__':
-    pass
+    from test import test
+    test()
