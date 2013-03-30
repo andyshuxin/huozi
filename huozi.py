@@ -1,5 +1,5 @@
 #!python
-#coding=utf-8
+# -*- coding: utf-8 -*-
 
 # Copyright (C) 2013 Shu Xin
 
@@ -29,7 +29,13 @@
 
 # In-app icons:
 #   taken from Default Icon. Credit to interactivemania
-#   (http://www.interactivemania.com).
+#   (http://www.interactivemania.com). Except:
+
+# Saveas icon:
+#   Downloaded from
+#   http://thenounproject.com/noun/save-file/#icon-No10092
+#   Designed by iconoci(http://thenounproject.com/iconoci/)
+#   from The Noun Project
 
 # Applicaion icon: 
 #   Downloaded from http://thenounproject.com/noun/keyboard/#icon-No3041
@@ -50,6 +56,7 @@ import sys
 import wx
 from aep import (Article, Issue,
                  urlClean, grab, analyseHTML, cleanText, createDoc,
+                 xml2issue, issue2xml,
                  BRA_L, BRA_R
                 )
 from text import txt
@@ -476,27 +483,33 @@ class MainFrame(wx.Frame):
 
     def DrawMainToolbar(self):
         self.toolbar = self.CreateToolBar()
-        newIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+        self.newIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='NewIssue',
                 bitmap=wx.Bitmap('img/newissue.png'),
                 shortHelp='',
                 )
 
-        openIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+        self.openIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='OpenIssue',
                 bitmap=wx.Bitmap('img/openissue.png'),
                 shortHelp='',
                 )
 
-        saveIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+        self.saveIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='SaveIssue',
                 bitmap=wx.Bitmap('img/saveissue.png'),
                 shortHelp='',
                 )
 
+        self.saveasIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+                label='SaveIssue',
+                bitmap=wx.Bitmap('img/saveas.png'),
+                shortHelp='',
+                )
+
         self.toolbar.AddSeparator()
 
-        configIssueTool = self.toolbar.AddLabelTool(wx.ID_SETUP,
+        self.configIssueTool = self.toolbar.AddLabelTool(wx.ID_SETUP,
                 label='ConfigureIssue',
                 bitmap=wx.Bitmap('img/configissue.png'),
                 shortHelp=txt['configIssueH'],
@@ -509,7 +522,7 @@ class MainFrame(wx.Frame):
                 shortHelp=txt['getDocH'],
                 )
 
-        publishTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+        self.publishTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='Publish',
                 bitmap=wx.Bitmap('img/publish.png'),
                 shortHelp='',
@@ -517,31 +530,30 @@ class MainFrame(wx.Frame):
 
         self.toolbar.AddSeparator()
 
-        aboutTool = self.toolbar.AddLabelTool(wx.ID_ABOUT,
+        self.aboutTool = self.toolbar.AddLabelTool(wx.ID_ABOUT,
                 label='About',
                 bitmap=wx.Bitmap('img/about.png'),
                 shortHelp=txt['AboutH'],
                 )
 
-        quitTool = self.toolbar.AddLabelTool(wx.ID_EXIT,
+        self.quitTool = self.toolbar.AddLabelTool(wx.ID_EXIT,
                 label='Quit',
                 bitmap=wx.Bitmap('img/quit.png'),
                 shortHelp=txt['quitH'],
                 )
 
-        self.Bind(wx.EVT_TOOL, self.OnNewIssue, newIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnOpenIssue, openIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnSaveIssue, saveIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnConfigIssue, configIssueTool)
+        self.Bind(wx.EVT_TOOL, self.OnNewIssue, self.newIssueTool)
+        self.Bind(wx.EVT_TOOL, self.OnOpenIssue, self.openIssueTool)
+        self.Bind(wx.EVT_TOOL, self.OnSaveIssue, self.saveIssueTool)
+        self.Bind(wx.EVT_TOOL, self.OnSaveAsIssue, self.saveasIssueTool)
+        self.Bind(wx.EVT_TOOL, self.OnConfigIssue, self.configIssueTool)
         self.Bind(wx.EVT_TOOL, self.OnCreateDoc, self.getDocTool)
-        self.Bind(wx.EVT_TOOL, self.OnAbout, aboutTool)
-        self.Bind(wx.EVT_TOOL, self.OnQuit, quitTool)
+        self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
+        self.Bind(wx.EVT_TOOL, self.OnQuit, self.quitTool)
 
-        for tool in (saveIssueTool, publishTool, self.getDocTool):
-            self.toolbar.EnableTool(tool.Id, False)
-
-        #Disabled because not implemented
-        for tool in (newIssueTool, openIssueTool, aboutTool):
+        for tool in (self.saveIssueTool, self.saveasIssueTool,
+                     self.publishTool, self.getDocTool,
+                     self.configIssueTool, self.aboutTool):
             self.toolbar.EnableTool(tool.Id, False)
 
         self.toolbar.Realize()
@@ -701,16 +713,79 @@ class MainFrame(wx.Frame):
         self.Centre()
         self.Show(True)
 
-        self.firstConfig = True
+        self.currentSavePath = ''
 
     def OnNewIssue(self, e):
-        pass
+        dlgYesNo = wx.MessageDialog(None,
+                                    txt['ConfirmNewQ'],
+                                    style=wx.YES|wx.NO)
+        if dlgYesNo.ShowModal() == wx.ID_YES:
+            self.OnConfigIssue(e)
+            self.toolbar.EnableTool(self.saveIssueTool.Id, True)
+            self.toolbar.EnableTool(self.saveasIssueTool.Id, True)
+            self.toolbar.EnableTool(self.configIssueTool.Id, True)
+            self.currentSavePath = ''
+            self.articleList.Clear()
+            self.issue = Issue()
 
     def OnOpenIssue(self, e):
-        pass
+        dlgOpenPath = wx.FileDialog(None, message=txt['PortraitT'],
+            wildcard="*.hif")
+        if dlgOpenPath.ShowModal() == wx.ID_OK:
+            self.articleList.Clear()
+            openPath = dlgOpenPath.GetPath()
+            dlgOpenPath.Destroy()
+        else:
+            return
+
+        f = open(openPath, 'r')
+        content = f.read()
+        f.close()
+
+        self.issue = xml2issue(content)
+        self.updateInfoBar(-1)
+        self.updateTextBox()
+        self.updateCatInfo()
+        self.refreshArticleListBox()
+
+        self.btnAddArticle.Enable(True)
+        self.btnAddArticles.Enable(True)
+        self.btnAddCategory.Enable(True)
+        self.toolbar.EnableTool(self.saveIssueTool.Id, True)
+        self.toolbar.EnableTool(self.saveasIssueTool.Id, True)
+        self.toolbar.EnableTool(self.configIssueTool.Id, True)
+
+        self.currentSavePath = openPath
 
     def OnSaveIssue(self, e):
-        pass
+        if not self.currentSavePath:
+            self.OnSaveAsIssue(e)
+            if self.currentSavePath:
+                self.toolbar.EnableTool(self.saveasIssueTool.Id, True)
+            return
+
+        f = open(self.currentSavePath, 'w')
+        content = issue2xml(self.issue)
+        f.write(content)
+        f.close()
+
+    def OnSaveAsIssue(self, e):
+        defaultDir, defaultFile = os.path.split(self.currentSavePath)
+
+        dlgSaveIssue = wx.FileDialog(None, message=txt['SaveIssueT'],
+                defaultDir=defaultDir,
+                defaultFile=defaultFile,
+                style=wx.FD_SAVE|wx.OVERWRITE_PROMPT, wildcard='*.hif')
+        if dlgSaveIssue.ShowModal() == wx.ID_OK:
+            savePath = dlgSaveIssue.GetPath()
+            dlgSaveIssue.Destroy()
+            self.currentSavePath = savePath
+        else:
+            return
+        f = open(savePath, 'w')
+        content = issue2xml(self.issue)
+        f.write(content)
+        f.close()
 
     def OnConfigIssue(self, e):
 
@@ -737,10 +812,6 @@ class MainFrame(wx.Frame):
         if ediRemark is not None:
             self.issue.ediRemark = ediRemark
 
-        if self.firstConfig:
-            self.OnAddArticles(e)
-            self.firstConfig = False
-
         self.btnAddArticle.Enable(True)
         self.btnAddArticles.Enable(True)
         self.btnAddCategory.Enable(True)
@@ -752,6 +823,7 @@ class MainFrame(wx.Frame):
         self.SetTitle(self.basicTitle + ': ' +
                       'Issue ' + self.issue.issueNum +
                       self.issue.grandTitle)
+        self.Enable()
 
     def OnAddArticle(self, e):
         self.Disable()
@@ -1072,7 +1144,6 @@ class MainFrame(wx.Frame):
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   wx.TextAttr('black', 'yellow'))
 
-
     def updateCatInfo(self):
         cat = ''
         for i in range(0, self.articleList.GetCount()):
@@ -1084,6 +1155,15 @@ class MainFrame(wx.Frame):
                     if article.title == item:
                         article.category = cat
                         break
+
+    def refreshArticleListBox(self):
+        self.articleList.Clear()
+        cat = ''
+        for article in self.issue:
+            if article.category != cat:
+                self.articleList.Append(BRA_L + article.category + BRA_R)
+                cat = article.category
+            self.articleList.Append(article.title)
 
     def askInfo(self, prompt, dialogTitle, defaultVal='',
                 multiline=False, noCancel=False):
@@ -1129,6 +1209,8 @@ class MainFrame(wx.Frame):
             print 'portraitPath: ', article.portraitPath
             print 'main text: ', article.text
             print 'teaser: ', article.teaser
+            print 'author', article.author
+            print 'author bio', article.authorBio
             try:
                 print 'ratio =', article.ratio
             except:
