@@ -3,7 +3,7 @@
 
 # Copyright (C) 2013 Shu Xin
 
-# Huozi, a simplistic DTP
+# Huozi, a simplistic DTP interface
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -353,6 +353,7 @@ class SetArticleFrame(BaseFrame):
     def OnCancel(self, e):
         self.Destroy()
         self.GetParent().Enable()
+        self.GetParent().Raise()
 
     def OnSetPortrait(self, e):
         path = self.askPortraitPath()
@@ -717,7 +718,7 @@ class MainFrame(wx.Frame):
         # Set up main frame
         self.Layout()
         self.SetSize((800, 600))
-        self.basicTitle = (u'活字 ' + __version__ +
+        self.basicTitle = (u'Tool Simple ' + __version__ +
                           ' (AEP: ' + __aepversion__ + ')')
         self.SetTitle(self.basicTitle)
         self.Centre()
@@ -1083,6 +1084,11 @@ class MainFrame(wx.Frame):
         rightMargin = len(text) if rightMargin == -1 else rightMargin
         line = text[leftMargin:rightMargin]
         article = self.getSelectedArticle()
+
+        # Duct tape
+        if leftMargin == 0 or rightMargin == len(text):
+            return
+        # End Ducttap
 
         if line in article.subheadLines:
             self.textBox.SetStyle(leftMargin, rightMargin,

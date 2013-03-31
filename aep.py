@@ -365,15 +365,11 @@ def grab(url):
 ##### .doc Export module #####
 
 def createDoc(issue):
-    try:
-        _createDoc(issue)
-    except:
-        print 'Shit happened'
-    finally:
-        # createDoc screws clipboard. better to clear it.
-        win32clipboard.OpenClipboard()
-        win32clipboard.EmptyClipboard()
-        win32clipboard.CloseClipboard()
+    _createDoc(issue)
+    # createDoc screws clipboard. better to clear it.
+    win32clipboard.OpenClipboard()
+    win32clipboard.EmptyClipboard()
+    win32clipboard.CloseClipboard()
 
 def _createDoc(issue):
     """Polutes clipboard! Use with caution!"""
