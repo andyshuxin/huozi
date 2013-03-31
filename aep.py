@@ -575,7 +575,7 @@ def xml2issue(xmlString):
         if type(item) == etree._Comment:
             continue
         if item.tag != 'article':
-            if item.tag is None:
+            if item.text is None:
                 item.text = ''
             setattr(issue, item.tag, item.text)
         else:
@@ -590,7 +590,7 @@ def xml2issue(xmlString):
                     for sub in attr:
                         article.subheadLines.append(sub.text)
             issue.addArticle(article)
-            print article.authorBio
+
 
     return issue
 

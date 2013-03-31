@@ -450,6 +450,9 @@ class AddArticlesFrame(BaseFrame):
         self.GetParent().Enable()
         self.Destroy()
 
+class TutorialFrame(object):
+    pass
+
 
 class MainFrame(wx.Frame):
 
@@ -530,6 +533,12 @@ class MainFrame(wx.Frame):
 
         self.toolbar.AddSeparator()
 
+        self.tutorialTool = self.toolbar.AddLabelTool(wx.ID_ANY,
+                label='About',
+                bitmap=wx.Bitmap('img/tutorial.png'),
+                shortHelp=txt['AboutH'],
+                )
+
         self.aboutTool = self.toolbar.AddLabelTool(wx.ID_ABOUT,
                 label='About',
                 bitmap=wx.Bitmap('img/about.png'),
@@ -549,6 +558,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.OnConfigIssue, self.configIssueTool)
         self.Bind(wx.EVT_TOOL, self.OnCreateDoc, self.getDocTool)
         self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
+        self.Bind(wx.EVT_TOOL, self.ShowTutorial, self.tutorialTool)
         self.Bind(wx.EVT_TOOL, self.OnQuit, self.quitTool)
 
         for tool in (self.saveIssueTool, self.saveasIssueTool,
@@ -726,10 +736,11 @@ class MainFrame(wx.Frame):
             self.toolbar.EnableTool(self.configIssueTool.Id, True)
             self.currentSavePath = ''
             self.articleList.Clear()
+            self.textBox.SetValue('')
             self.issue = Issue()
 
     def OnOpenIssue(self, e):
-        dlgOpenPath = wx.FileDialog(None, message=txt['PortraitT'],
+        dlgOpenPath = wx.FileDialog(None, message=txt['OpenIssueT'],
             wildcard="*.hif")
         if dlgOpenPath.ShowModal() == wx.ID_OK:
             self.articleList.Clear()
@@ -754,6 +765,9 @@ class MainFrame(wx.Frame):
         self.toolbar.EnableTool(self.saveIssueTool.Id, True)
         self.toolbar.EnableTool(self.saveasIssueTool.Id, True)
         self.toolbar.EnableTool(self.configIssueTool.Id, True)
+        if os.name == 'nt':
+            # TODO: Registry checking for Word
+            self.toolbar.EnableTool(self.getDocTool.Id, True)
 
         self.currentSavePath = openPath
 
@@ -862,7 +876,6 @@ class MainFrame(wx.Frame):
         if hasCP and not wx.TheClipboard.IsOpened():
             wx.TheClipboard.Open()
             wx.TheClipboard.SetData(cp)
-            print 'set!'
             wx.TheClipboard.Close()
 
     def OnQuit(self, e):
@@ -1084,8 +1097,11 @@ class MainFrame(wx.Frame):
     def OnToggleComment(self, e):
         pass
 
-    def OnAbout(self,e):
+    def OnAbout(self, e):
         pass
+
+    def ShowTutorial(self, e):
+        TutorialFrame()
 
     def updateInfoBar(self, index):
 
@@ -1204,7 +1220,7 @@ class MainFrame(wx.Frame):
             print 'title: ', article.title
             print 'url:', article.url
             for sub in article.subheadLines:
-                print 'subs: ', sub.encode('utf-8')
+                print 'subs: ', sub
             print 'category: ', article.category
             print 'portraitPath: ', article.portraitPath
             print 'main text: ', article.text
