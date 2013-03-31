@@ -473,111 +473,84 @@ class MainFrame(wx.Frame):
         self.panelInfoBar.Bind(wx.EVT_LEFT_DOWN, self.OnModifyItemInfo)
 
     def DrawBoxSizers(self):
+        self.vBoxGeneral = wx.BoxSizer(wx.VERTICAL)
+        self.toolbarBox = wx.BoxSizer(wx.HORIZONTAL)
+        self.vBoxGeneral.Add(self.toolbarBox, 0,
+                flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT, border=5)
         self.hBox = wx.BoxSizer(wx.HORIZONTAL)
+        self.vBoxGeneral.Add(self.hBox, 1, flag=wx.EXPAND)
         self.vBoxLeft = wx.BoxSizer(wx.VERTICAL)
         self.vBoxRight = wx.BoxSizer(wx.VERTICAL)
         self.hBox.Add(self.vBoxLeft, proportion=1,
                       flag=wx.EXPAND|wx.ALL, border=5)
         self.hBox.Add(self.vBoxRight, proportion=3,
                       flag=wx.EXPAND|wx.ALL, border=5)
-        self.panel.SetSizerAndFit(self.hBox)
+        self.panel.SetSizerAndFit(self.vBoxGeneral)
         self.gridBox = wx.GridSizer(2, 4)   #self.gridBoxer scales better
         self.vBoxLeft.Add(self.gridBox, proportion=0, flag=wx.EXPAND)
         self.vBoxRight.Add(self.panelInfoBar, 0, flag=wx.EXPAND)
 
+    def regToolbarBtn(self, bmPath, bmdPath):
+        btn = wx.BitmapButton(self.panel, wx.ID_ANY,
+                              wx.Bitmap(bmPath))
+        icon = wx.Bitmap(bmdPath)
+        btn.SetBitmapDisabled(icon)
+        self.toolbarBox.Add(btn)
+        return btn
+
     def DrawMainToolbar(self):
-        self.toolbar = self.CreateToolBar()
-        self.newIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                label='NewIssue',
-                bitmap=wx.Bitmap('img/newissue.png'),
-                bmpDisabled=wx.Bitmap('img/newissue-d.png'),
-                shortHelp='',
-                )
+        #self.btnNewIssue = wx.BitmapButton(self.panel, wx.ID_ANY,
+                                           #wx.Bitmap('img/newissue.png'))
+        #icon = wx.Bitmap('img/newissue-d.png')
+        #self.btnNewIssue.SetBitmapDisabled(icon)
+        #self.toolbarBox.Add(self.btnNewIssue)
+        self.btnNewIssue = self.regToolbarBtn('img/newissue.png',
+                                              'img/newissue-d.png')
 
-        self.openIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                label='OpenIssue',
-                bitmap=wx.Bitmap('img/openissue.png'),
-                bmpDisabled=wx.Bitmap('img/openissue-d.png'),
-                shortHelp='',
-                )
+        self.btnOpenIssue = self.regToolbarBtn('img/openissue.png',
+                                               'img/openissue-d.png')
 
-        self.saveIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                label='SaveIssue',
-                bitmap=wx.Bitmap('img/saveissue.png'),
-                bmpDisabled=wx.Bitmap('img/saveissue-d.png'),
-                shortHelp='',
-                )
+        self.btnSaveIssue = self.regToolbarBtn('img/saveissue.png',
+                                               'img/saveissue-d.png')
 
-        self.saveasIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                label='SaveIssue',
-                bitmap=wx.Bitmap('img/saveas.png'),
-                bmpDisabled=wx.Bitmap('img/saveas-d.png'),
-                shortHelp='',
-                )
+        self.btnSaveasIssue = self.regToolbarBtn('img/saveas.png',
+                                                 'img/saveas-d.png')
 
-        self.toolbar.AddSeparator()
+        self.toolbarBox.AddSpacer(10)
 
-        self.configIssueTool = self.toolbar.AddLabelTool(wx.ID_SETUP,
-                label='ConfigureIssue',
-                bitmap=wx.Bitmap('img/configissue.png'),
-                bmpDisabled=wx.Bitmap('img/configissue-d.png'),
-                shortHelp=txt['configIssueH'],
-                )
+        self.btnConfigIssue = self.regToolbarBtn('img/configissue.png',
+                                                 'img/configissue-d.png')
 
+        self.btnGetDoc = self.regToolbarBtn('img/getdoc.png',
+                                            'img/getdoc-d.png')
 
-        self.getDocTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                label='GetDoc',
-                bitmap=wx.Bitmap('img/getdoc.png'),
-                bmpDisabled=wx.Bitmap('img/getdoc-d.png'),
-                shortHelp=txt['getDocH'],
-                )
+        self.btnPublish = self.regToolbarBtn('img/publish.png',
+                                             'img/publish-d.png')
 
-        self.publishTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                label='Publish',
-                bitmap=wx.Bitmap('img/publish.png'),
-                bmpDisabled=wx.Bitmap('img/publish-d.png'),
-                shortHelp='',
-                )
+        self.toolbarBox.AddSpacer(10)
+        self.btnTutorial = self.regToolbarBtn('img/tutorial.png',
+                                              'img/tutorial-d.png')
 
-        self.toolbar.AddSeparator()
+        self.btnAbout = self.regToolbarBtn('img/about.png',
+                                           'img/about-d.png')
 
-        self.tutorialTool = self.toolbar.AddLabelTool(wx.ID_ANY,
-                label='About',
-                bitmap=wx.Bitmap('img/tutorial.png'),
-                bmpDisabled=wx.Bitmap('img/tutorial-d.png'),
-                shortHelp=txt['AboutH'],
-                )
+        self.btnQuit = self.regToolbarBtn('img/quit.png',
+                                          'img/quit-d.png')
 
-        self.aboutTool = self.toolbar.AddLabelTool(wx.ID_ABOUT,
-                label='About',
-                bitmap=wx.Bitmap('img/about.png'),
-                bmpDisabled=wx.Bitmap('img/about-d.png'),
-                shortHelp=txt['AboutH'],
-                )
+        self.btnNewIssue.Bind(wx.EVT_BUTTON, self.OnNewIssue)
+        self.btnOpenIssue.Bind(wx.EVT_BUTTON, self.OnOpenIssue)
+        self.btnSaveIssue.Bind(wx.EVT_BUTTON, self.OnSaveIssue)
+        self.btnSaveasIssue.Bind(wx.EVT_BUTTON, self.OnSaveAsIssue)
+        self.btnConfigIssue.Bind(wx.EVT_BUTTON, self.OnConfigIssue)
+        self.btnGetDoc.Bind(wx.EVT_BUTTON, self.OnCreateDoc)
+        self.btnTutorial.Bind(wx.EVT_BUTTON, self.OnTutorial)
+        self.btnAbout.Bind(wx.EVT_BUTTON, self.OnAbout)
+        self.btnQuit.Bind(wx.EVT_BUTTON, self.OnQuit)
 
-        self.quitTool = self.toolbar.AddLabelTool(wx.ID_EXIT,
-                label='Quit',
-                bitmap=wx.Bitmap('img/quit.png'),
-                bmpDisabled=wx.Bitmap('img/quit-d.png'),
-                shortHelp=txt['quitH'],
-                )
+        for btn in (self.btnSaveIssue, self.btnSaveasIssue, self.btnPublish,
+                    self.btnGetDoc, self.btnConfigIssue, self.btnAbout):
+            btn.Disable()
 
-        self.Bind(wx.EVT_TOOL, self.OnNewIssue, self.newIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnOpenIssue, self.openIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnSaveIssue, self.saveIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnSaveAsIssue, self.saveasIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnConfigIssue, self.configIssueTool)
-        self.Bind(wx.EVT_TOOL, self.OnCreateDoc, self.getDocTool)
-        self.Bind(wx.EVT_TOOL, self.OnAbout, self.aboutTool)
-        self.Bind(wx.EVT_TOOL, self.ShowTutorial, self.tutorialTool)
-        self.Bind(wx.EVT_TOOL, self.OnQuit, self.quitTool)
-
-        for tool in (self.saveIssueTool, self.saveasIssueTool,
-                     self.publishTool, self.getDocTool,
-                     self.configIssueTool, self.aboutTool):
-            self.toolbar.EnableTool(tool.Id, False)
-
-        self.toolbar.Realize()
 
     def DrawInfoBars(self):
         # TODO: better formatting and add direct editability
@@ -624,7 +597,7 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_LISTBOX_DCLICK, self.OnArticleListDclick,
                   self.articleList)
 
-        # Toolbar
+        # Toolbox
         self.btnAddArticle = wx.BitmapButton(self.panel, wx.ID_ANY,
                                              wx.Bitmap('img/addarticle.png'))
         icon = wx.Bitmap('img/addarticle-d.png')
@@ -662,8 +635,11 @@ class MainFrame(wx.Frame):
 
 
         for button in (self.btnAddArticle, self.btnAddArticles,
-                       self.btnAddCategory, self.btnDel,
-                       self.btnUp, self.btnDn, self.btnMdf):
+                       self.btnAddCategory):
+            self.gridBox.Add(button, flag=wx.EXPAND)
+            button.Enable(False)
+        self.gridBox.AddSpacer(0)
+        for button in (self.btnUp, self.btnDn, self.btnMdf, self.btnDel):
             self.gridBox.Add(button, flag=wx.EXPAND)
             button.Enable(False)
 
@@ -746,7 +722,7 @@ class MainFrame(wx.Frame):
             self.btnAddArticle.Enable(True)
             self.btnAddArticles.Enable(True)
             self.btnAddCategory.Enable(True)
-            self.toolbar.EnableTool(self.getDocTool.Id, True)
+            self.btnGetDoc.Enable()
 
         # Set up main frame
         self.Layout()
@@ -765,9 +741,9 @@ class MainFrame(wx.Frame):
                                     style=wx.YES|wx.NO)
         if dlgYesNo.ShowModal() == wx.ID_YES:
             self.OnConfigIssue(e)
-            self.toolbar.EnableTool(self.saveIssueTool.Id, True)
-            self.toolbar.EnableTool(self.saveasIssueTool.Id, True)
-            self.toolbar.EnableTool(self.configIssueTool.Id, True)
+            for btn in (self.btnSaveIssue, self.btnSaveasIssue,
+                        self.btnConfigIssue):
+               btn.Enable()
             self.currentSavePath = ''
             self.articleList.Clear()
             self.textBox.SetValue('')
@@ -796,12 +772,12 @@ class MainFrame(wx.Frame):
         self.btnAddArticle.Enable(True)
         self.btnAddArticles.Enable(True)
         self.btnAddCategory.Enable(True)
-        self.toolbar.EnableTool(self.saveIssueTool.Id, True)
-        self.toolbar.EnableTool(self.saveasIssueTool.Id, True)
-        self.toolbar.EnableTool(self.configIssueTool.Id, True)
+        for btn in (self.btnSaveIssue, self.btnSaveasIssue,
+                    self.btnConfigIssue):
+           btn.Enable()
         if os.name == 'nt':
             # TODO: Registry checking for Word
-            self.toolbar.EnableTool(self.getDocTool.Id, True)
+            self.btnGetDoc.Enable()
 
         self.currentSavePath = openPath
 
@@ -809,7 +785,7 @@ class MainFrame(wx.Frame):
         if not self.currentSavePath:
             self.OnSaveAsIssue(e)
             if self.currentSavePath:
-                self.toolbar.EnableTool(self.saveasIssueTool.Id, True)
+                self.btnSaveasIssue.Enable()
             return
 
         f = open(self.currentSavePath, 'w')
@@ -865,7 +841,7 @@ class MainFrame(wx.Frame):
         self.btnAddCategory.Enable(True)
         if os.name == 'nt':
             # TODO: Registry checking for Word
-            self.toolbar.EnableTool(self.getDocTool.Id, True)
+            self.btnGetDoc.Enable()
 
         self.updateInfoBar(-1)
         self.SetTitle(self.basicTitle + ': ' +
@@ -1139,7 +1115,10 @@ class MainFrame(wx.Frame):
     def OnAbout(self, e):
         pass
 
-    def ShowTutorial(self, e):
+    def OnTutorial(self, e):
+        self.Tutorial(e)
+
+    def showTutorial(self, e):
         TutorialFrame()
 
     def updateInfoBar(self, index):
