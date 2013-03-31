@@ -3,7 +3,7 @@
 
 # Copyright (C) 2013 Shu Xin
 
-# Huozi, a simplistic DTP interface
+# Tool Simple, a simplistic DTP interface
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -490,24 +490,28 @@ class MainFrame(wx.Frame):
         self.newIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='NewIssue',
                 bitmap=wx.Bitmap('img/newissue.png'),
+                bmpDisabled=wx.Bitmap('img/newissue-d.png'),
                 shortHelp='',
                 )
 
         self.openIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='OpenIssue',
                 bitmap=wx.Bitmap('img/openissue.png'),
+                bmpDisabled=wx.Bitmap('img/openissue-d.png'),
                 shortHelp='',
                 )
 
         self.saveIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='SaveIssue',
                 bitmap=wx.Bitmap('img/saveissue.png'),
+                bmpDisabled=wx.Bitmap('img/saveissue-d.png'),
                 shortHelp='',
                 )
 
         self.saveasIssueTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='SaveIssue',
                 bitmap=wx.Bitmap('img/saveas.png'),
+                bmpDisabled=wx.Bitmap('img/saveas-d.png'),
                 shortHelp='',
                 )
 
@@ -516,6 +520,7 @@ class MainFrame(wx.Frame):
         self.configIssueTool = self.toolbar.AddLabelTool(wx.ID_SETUP,
                 label='ConfigureIssue',
                 bitmap=wx.Bitmap('img/configissue.png'),
+                bmpDisabled=wx.Bitmap('img/configissue-d.png'),
                 shortHelp=txt['configIssueH'],
                 )
 
@@ -523,12 +528,14 @@ class MainFrame(wx.Frame):
         self.getDocTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='GetDoc',
                 bitmap=wx.Bitmap('img/getdoc.png'),
+                bmpDisabled=wx.Bitmap('img/getdoc-d.png'),
                 shortHelp=txt['getDocH'],
                 )
 
         self.publishTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='Publish',
                 bitmap=wx.Bitmap('img/publish.png'),
+                bmpDisabled=wx.Bitmap('img/publish-d.png'),
                 shortHelp='',
                 )
 
@@ -537,18 +544,21 @@ class MainFrame(wx.Frame):
         self.tutorialTool = self.toolbar.AddLabelTool(wx.ID_ANY,
                 label='About',
                 bitmap=wx.Bitmap('img/tutorial.png'),
+                bmpDisabled=wx.Bitmap('img/tutorial-d.png'),
                 shortHelp=txt['AboutH'],
                 )
 
         self.aboutTool = self.toolbar.AddLabelTool(wx.ID_ABOUT,
                 label='About',
                 bitmap=wx.Bitmap('img/about.png'),
+                bmpDisabled=wx.Bitmap('img/about-d.png'),
                 shortHelp=txt['AboutH'],
                 )
 
         self.quitTool = self.toolbar.AddLabelTool(wx.ID_EXIT,
                 label='Quit',
                 bitmap=wx.Bitmap('img/quit.png'),
+                bmpDisabled=wx.Bitmap('img/quit-d.png'),
                 shortHelp=txt['quitH'],
                 )
 
@@ -617,24 +627,38 @@ class MainFrame(wx.Frame):
         # Toolbar
         self.btnAddArticle = wx.BitmapButton(self.panel, wx.ID_ANY,
                                              wx.Bitmap('img/addarticle.png'))
+        icon = wx.Bitmap('img/addarticle-d.png')
+        self.btnAddArticle.SetBitmapDisabled(icon)
 
         self.btnAddArticles = wx.BitmapButton(self.panel, wx.ID_ANY,
                                               wx.Bitmap('img/addmany.png'))
+        icon = wx.Bitmap('img/addmany-d.png')
+        self.btnAddArticles.SetBitmapDisabled(icon)
 
         self.btnAddCategory = wx.BitmapButton(self.panel, wx.ID_ANY,
                                               wx.Bitmap('img/addcategory.png'))
+        icon = wx.Bitmap('img/addcategory-d.png')
+        self.btnAddCategory.SetBitmapDisabled(icon)
 
         self.btnDel = wx.BitmapButton(self.panel, wx.ID_DELETE,
                                      wx.Bitmap('img/delete.png'))
+        icon = wx.Bitmap('img/delete-d.png')
+        self.btnDel.SetBitmapDisabled(icon)
 
         self.btnUp = wx.BitmapButton(self.panel, wx.ID_UP,
                                      wx.Bitmap('img/up.png'))
+        icon = wx.Bitmap('img/up-d.png')
+        self.btnUp.SetBitmapDisabled(icon)
 
         self.btnDn = wx.BitmapButton(self.panel, wx.ID_DOWN,
                                      wx.Bitmap('img/down.png'))
+        icon = wx.Bitmap('img/down-d.png')
+        self.btnDn.SetBitmapDisabled(icon)
 
         self.btnMdf = wx.BitmapButton(self.panel, wx.ID_ANY,
                                      wx.Bitmap('img/modify.png'))
+        icon = wx.Bitmap('img/modify-d.png')
+        self.btnMdf.SetBitmapDisabled(icon)
 
 
         for button in (self.btnAddArticle, self.btnAddArticles,
@@ -665,18 +689,27 @@ class MainFrame(wx.Frame):
         self.btnSubhead = wx.BitmapButton(self.panel,
                                      wx.ID_ANY,
                                      wx.Bitmap('img/highlight.png'))
+        icon = wx.Bitmap('img/highlight-d.png')
+        self.btnSubhead.SetBitmapDisabled(icon)
 
         self.btnEdit = wx.BitmapButton(self.panel,
                                        wx.ID_ANY,
                                        wx.Bitmap('img/edit.png'))
+        icon = wx.Bitmap('img/edit-d.png')
+        self.btnEdit.SetBitmapDisabled(icon)
 
         self.btnComment = wx.BitmapButton(self.panel,
                                           wx.ID_ANY,
                                           wx.Bitmap('img/comment.png'))
+        icon = wx.Bitmap('img/comment-d.png')
+        self.btnComment.SetBitmapDisabled(icon)
 
         self.btnSave = wx.BitmapButton(self.panel,
                                        wx.ID_ANY,
                                        wx.Bitmap('img/save.png'))
+        icon = wx.Bitmap('img/save-d.png')
+        self.btnSave.SetBitmapDisabled(icon)
+
         self.btnSubhead.Enable(False)
         self.btnComment.Enable(False)
         self.btnEdit.Enable(False)

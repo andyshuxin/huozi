@@ -25,6 +25,7 @@ txtMainFrame = {
         'getDocH':       "Produce doc file",
         'quitH':         "Quit",
         'AboutH':        "About",
+        'TutorialH':     "Tutorial",
         'issueNoH':      "Issue no.",
         'articleNo':     "Total number of articles: ",
         'ratioH':        "Threshold:",
