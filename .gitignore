@@ -6,8 +6,10 @@ obsolete
 *.html
 *.htm
 *.txt
+*.log
 
 test*
+Copy*
 
 
 tags

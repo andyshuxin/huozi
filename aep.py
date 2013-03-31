@@ -17,12 +17,13 @@ __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
 import sys
 import os
+import logging
 import string
 import urllib2
 import wx
 from PIL import Image
 from lxml import etree
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from ExtMainText import extMainText
 from ExtMainText import get_text
 try:
@@ -37,6 +38,11 @@ try:
     hasChardet = True
 except ImportError:
     hasChardet = False
+
+##### logging. config #####
+logging.basicConfig(filename='aep.log', level=logging.DEBUG)
+logging.info('\r\n' + '='*30)
+logging.info('AEP running '+str(datetime.now()))
 
 #####  Constants  #####
 
@@ -137,6 +143,10 @@ def _isChinese(char):
 
 def cleanText(inputText, patternBook=CLEANERBOOK):
 
+    logging.info('cleanText running '+str(datetime.now()))
+    if len(inputText) >= 20:
+        logging.info('cleanText input: %s ...' % inputText[20])
+
     if len(inputText) <= 2:
         return inputText
 
@@ -160,6 +170,7 @@ def cleanText(inputText, patternBook=CLEANERBOOK):
                 i -= 1
         i += 1
 
+    logging.info('cleanText about to return')
     return text
 
 #####  HTML Analyser Module  #####
@@ -264,6 +275,8 @@ def analyseHTML(htmlText, ratio=None):
             with their values
     """
 
+    logging.info('analyseHtml running '+str(datetime.now()))
+
     mainText = extMainText(htmlText)
     if ratio:
         mainText = extMainText(htmlText, ratio, False)
@@ -280,6 +293,7 @@ def analyseHTML(htmlText, ratio=None):
             'sub':    meta[2],
            }
 
+    logging.info('analyseHtml about to return')
     return (mainText, meta)
 
 #####  Grabber module  #####
@@ -299,6 +313,7 @@ def grab(url):
     Will autodetect if charset is not defined. When all other
     measures fail, assume UTF-8 and carry on.
     """
+    logging.info('grab running '+str(datetime.now()))
 
     class SmartRedirectHandler(urllib2.HTTPRedirectHandler):
 
@@ -359,7 +374,9 @@ def grab(url):
     charset = 'gbk' if charset == 'gb2312' else charset
     charset = 'big5hkscs' if charset == 'big5' else charset
     charset = 'utf-8' if (charset is None) or (charset == '') else charset
+    logging.info('grab(): detected charset %s' % charset)
     html = html.decode(charset, 'ignore')
+    logging.info('grab about to return')
     return html
 
 ##### .doc Export module #####
@@ -374,8 +391,12 @@ def createDoc(issue):
 def _createDoc(issue):
     """Polutes clipboard! Use with caution!"""
 
+    logging.info('Doc creation module running %s' % str(datetime.now()))
+    logging.info('Connecting MS Word')
     word = win32.gencache.EnsureDispatch('Word.Application')
+    logging.info('MS Word API connection succeeded')
     doc = word.Documents.Open(os.getcwd() + r'\template.dot')
+    logging.info('Template open succeeded. Adding contents.')
 
     ##### Add contents #####
 
@@ -383,11 +404,13 @@ def _createDoc(issue):
     rng = doc.Content
     rng.Find.Execute(FindText='[COVERIMAGE]', ReplaceWith='')
     #TODO
+    logging.info('coverpage processed')
 
     ## Editor's Remarks
     rng = doc.Content
     rng.Find.Execute(FindText='[EDITORREMARK]', ReplaceWith='')
     rng.InsertAfter(issue.ediRemark)
+    logging.info("editor's remark processed")
 
     ## Header
     today = date.today()
@@ -407,11 +430,13 @@ def _createDoc(issue):
     # No title for contents page
     doc.Sections(3).Headers(C).Range.InsertAfter(pubDayS + ' ' + fullTitle +
                                                  '\r\n' * 2)
+    logging.info("Header processed")
 
     # Copy teaser
     docTeaser = word.Documents.Open(os.getcwd() + r'\teaser.dot')
     docTeaser.Tables(1).Range.Copy()
     docTeaser.Close()
+    logging.info("Teaser table copied. Adding articles")
 
     ## Add articles
     rng = doc.Content
@@ -422,6 +447,7 @@ def _createDoc(issue):
     count = 1
     for article in issue:
 
+        logging.info("Adding article %s" % article.title)
         # Category name, if any
         if article.category != category:
             category = article.category
@@ -438,7 +464,7 @@ def _createDoc(issue):
             rng.InsertAfter(article.title + '\r\n')
         rng.Style = win32.constants.wdStyleHeading2
         rng.Collapse( win32.constants.wdCollapseEnd )
-
+        logging.info('Title "%s" inserted' % article.title)
 
         # Teaser
         rng.InsertAfter('\r\n')
@@ -451,6 +477,7 @@ def _createDoc(issue):
         rng = doc.Range(endPos, endPos)
         rng.InsertAfter('\r\n')
         rng.Collapse( win32.constants.wdCollapseEnd )
+        logging.info('Teaser inserted, length=%s' % str(len(article.text)))
 
         # Main text
         for line in article.text.splitlines():
@@ -461,6 +488,7 @@ def _createDoc(issue):
                 rng.Style = win32.constants.wdStyleHeading3
         rng.InsertAfter('\r\n')
         rng.Collapse( win32.constants.wdCollapseEnd )
+        logging.info('Main text inserted, length=%s' % str(len(article.text)))
 
         # Original URL and Back To Contents
         if article.url:
@@ -480,6 +508,7 @@ def _createDoc(issue):
         rng.ParagraphFormat.Alignment = win32.constants.wdAlignParagraphRight
         rng.Collapse( win32.constants.wdCollapseEnd )
         rng.InsertBreak( win32.constants.wdPageBreak )
+        logging.info('links added')
 
     ### Portraits and author's bio
     for article in issue:
@@ -522,22 +551,27 @@ def _createDoc(issue):
         rng = textBox.TextFrame.TextRange
         rng.Text = article.authorBio
         rng.Style = win32.constants.wdStyleHeading5
+        logging.info('portrait and bio inserted')
 
     ### Table of Contents
     rng = doc.Content
     rng.Find.Execute(FindText='[TOC]', ReplaceWith='')
     doc.TablesOfContents.Add(doc.Range(rng.End, rng.End), True, 1, 2)
-
+    logging.info('TOC inserted')
 
     # Finalizing
     doc.SaveAs(FileName=(os.getcwd() + '\\' + fullTitle),
                FileFormat=win32.constants.wdFormatDocument)
+    logging.info('File saved')
     word.Visible = True
+    logging.info('Word made visible')
     #word.Application.Quit()
 
 ##### XML Reader and Writer modules #####
 
 def issue2xml(issue):
+    logging.info('issue2xml running '+str(datetime.now()))
+
     root = etree.Element('issue')
     root.append(etree.Comment("Generated by AEP version "+__version__))
     issueNum = etree.SubElement(root, "issueNum")
@@ -560,10 +594,12 @@ def issue2xml(issue):
             subElement = etree.SubElement(subheadsElement, 'sub')
             subElement.text = sub
 
+    logging.info('issue2xml about to return')
     return etree.tostring(root, encoding='UTF-8' ,xml_declaration=True,
                           pretty_print=True)
 
 def xml2issue(xmlString):
+    logging.info('xml2issue running '+str(datetime.now()))
     issue = Issue()
 
     root = etree.fromstring(xmlString)
@@ -587,7 +623,7 @@ def xml2issue(xmlString):
                         article.subheadLines.append(sub.text)
             issue.addArticle(article)
 
-
+    logging.info('xml2issue about to return')
     return issue
 
 
