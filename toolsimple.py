@@ -387,9 +387,9 @@ class AddArticlesFrame(wx.Frame):
                 articleList.append(article)
             except RuntimeError as err:
                 try:
-                    errorMsg = (txt['graberror']+ err[0] + ': ' + err[1],
-                                txt['graberrorCap'])
+                    errorMsg = (txt['graberror']+ err[0] + ': ' + err[1])
                     dlg = wx.MessageDialog(self.panel, errorMsg,
+                                           txt['graberrorCap'],
                                            wx.OK|wx.ICON_INFORMATION)
                     dlg.ShowModal()
                     dlg.Destroy()
@@ -558,8 +558,9 @@ class MainFrame(wx.Frame):
         self.infoBar3.Bind(wx.EVT_LEFT_DOWN, self.onModifyItemInfo)
         self.infoBar4.Bind(wx.EVT_LEFT_DOWN, self.onModifyItemInfo)
 
-        boldFont = wx.Font(11, wx.NORMAL, wx.NORMAL, wx.BOLD)
-        self.infoBar1.SetFont(boldFont)
+        if sys.platform != 'darwin':
+            boldFont = wx.Font(11, wx.NORMAL, wx.NORMAL, wx.BOLD)
+            self.infoBar1.SetFont(boldFont)
 
         self.panelInfoBar.SetSizerAndFit(infoBarBox)
 
