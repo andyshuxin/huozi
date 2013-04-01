@@ -11,13 +11,16 @@ It includes these tools:
 + A html parser that extract its main text and guess title, author, and where the sub-headlines lies.
 + A grabber that grabs a URL, Unicode supported.
 
-## System Requirment
-+ lxml, BeautifulSoup 4
+## Requirments
++ Python 2.7 (not tested on other versions)
++ lxml, BeautifulSoup 3
++ PIL
 For auto-detection of charset:
 + chardet
 For doc export:
 + MS Windows XP or 7; Vista should probably work but not tested.
 + MS Word 2007 or 2010; Version 2013 and 2003 could work as well.
++ win32com
 
 ## Software Structure
 For a closer look at the structure of the package, see [package structure](https://docs.google.com/drawings/d/1a7UuFqxJZ2w612ZCunHIQBt-jXBpSWyJm_HNQ4I4vuE/edit?usp=sharing).
