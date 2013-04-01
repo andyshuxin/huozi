@@ -18,8 +18,8 @@ __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 import sys
 import os
 import logging
-import string
 import urllib2
+from copy import deepcopy
 import wx
 from PIL import Image
 from lxml import etree
@@ -39,7 +39,7 @@ try:
 except ImportError:
     hasChardet = False
 
-##### logging. config #####
+##### logging config #####
 logging.basicConfig(filename='aep.log', level=logging.DEBUG)
 logging.info('\r\n' + '='*30)
 logging.info('AEP running '+str(datetime.now()))
@@ -81,13 +81,15 @@ BRA_L, BRA_R = u'【', u'】'
 
 MAGIC_WIDTH = 120.0   # useful in portrait positioning
 
+ascii_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+digits = '0123456789'
 #####  Data strcture  #####
 
 class Article(object):
 
     def __init__(self, title='', author='', authorBio='', text='', teaser='',
-                 subheadLines=[], comments=[], category = '',
-                 portraitPath='', url='', urlAlt=''):
+                 subheadLines=[], comments=[], category='',
+                 portraitPath='', url='', urlAlt='', ratio='0.5'):
         self.title = title
         self.author = author
         self.authorBio = authorBio
@@ -99,6 +101,7 @@ class Article(object):
         self.portraitPath = portraitPath
         self.url = url
         self.urlAlt = urlAlt
+        self.ratio = ratio
 
     def addSub(self, sub):
         if sub not in self.subheadLines:
@@ -116,6 +119,41 @@ class Article(object):
         if comm in self.comments:
             self.comments.remove(comm)
 
+    def loadURL(self, url, issue, ratio=None,
+                    detectDuplicate=False):
+        """Adding one article, giving the user more control.
+        If ratio is not given, try 0.5, then if there are too few contents,
+        try 0.4, then 0.3...
+        """
+
+        if len(url) <= 2:
+            return None
+
+        url = urlClean(url)
+        if detectDuplicate:
+            urlList = [article.url for article in issue]
+            if url in urlList:
+                raise RuntimeError(url, "Duplicated website!")
+
+        htmlText = grab(url)
+        if not ratio:
+            ratio = 0.5
+        analysis = analyseHTML(htmlText, ratio)
+        mainText = cleanText(analysis[0])
+        if len(mainText) <= 1:
+            raise RuntimeError(url, "Can't extract content!")
+
+        meta = analysis[1]
+        self.title=meta['title']
+        self.author=meta['author']
+        self.text=mainText
+        self.subheadLines=meta['sub']
+        self.url=url
+        self.ratio = unicode(ratio)
+
+    def copy(self):
+        return deepcopy(self)
+
 class Issue(object):
 
     def __init__(self, issueNum='', grandTitle='', ediRemark=''):
@@ -131,6 +169,15 @@ class Issue(object):
 
     def deleteArticle(self, article):
         self.articleList.remove(article)
+
+    def replaceArticle(self, articleToDelete, articleToAdd):
+        """Delete articleToDelete and put articleToAdd in its position"""
+        try:
+            i = self.articleList.index(articleToDelete)
+            self.articleList.remove(articleToDelete)
+            self.articleList.insert(i, articleToAdd)
+        except ValueError:
+            return
 
     def __iter__(self):
         for article in self.articleList:
@@ -269,10 +316,11 @@ def _guessMeta(htmlText, plainText):
 def analyseHTML(htmlText, ratio=None):
 
     """
-    Input: htmlText, a string, which is a html file
+    Input: htmlText, a string, which is a html file;
+           ratio, the thresold ratio to be used in main text extraction.
     Output: a tuple, first element being the content part of the html,
             and the second element being a dictionary mapping meta labels
-            with their values
+            with their values.
     """
 
     logging.info('analyseHtml running '+str(datetime.now()))
@@ -287,10 +335,10 @@ def analyseHTML(htmlText, ratio=None):
             ratio -= 0.1
     mainText = get_text(mainText)
 
-    meta = _guessMeta(htmlText, mainText)
-    meta = {'title':  meta[0],
-            'author': meta[1],
-            'sub':    meta[2],
+    metaSeq = _guessMeta(htmlText, mainText)
+    meta = {'title':  metaSeq[0],
+            'author': metaSeq[1],
+            'sub':    metaSeq[2],
            }
 
     logging.info('analyseHtml about to return')
@@ -313,6 +361,7 @@ def grab(url):
     Will autodetect if charset is not defined. When all other
     measures fail, assume UTF-8 and carry on.
     """
+
     logging.info('grab running '+str(datetime.now()))
 
     class SmartRedirectHandler(urllib2.HTTPRedirectHandler):
@@ -339,8 +388,8 @@ def grab(url):
 
     def _isLegit(char):
         """ Return true if char can be part of a charset statement """
-        if (char in string.ascii_letters or
-            char in string.digits or
+        if (char in ascii_letters or
+            char in digits or
             char == '-'):
            return True
         return False

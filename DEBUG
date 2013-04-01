@@ -1,0 +1,2 @@
+Delete or rename this file to disable DEBUG mode.
+Note that if pyinstaller is initiated in another directory, and there is no 'DEBUG' file in that directory, DEBUG mode will be also disabled.
