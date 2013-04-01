@@ -1,4 +1,4 @@
-#coding=utf-8
+# -*- coding: utf-8 -*-
 
 # AEP, Automatic E-magazine Processor, a set of modules that simulate
 # human action in the following procedures:
@@ -52,18 +52,18 @@ try:
 except IOError:
     DEBUG = False
 
+SYSENC = sys.getfilesystemencoding()
+
 MAXSUBLEN = 12        # Any line longer is assumed not subheadline
 SUBTHREDSOLD = 0.4    # How relatively short a line must be to be a sub
 
-CLEANERBOOK = (
-               (u'\u3000',    ' '),          #Ideographic spaces
+CLEANERBOOK = ((u'\u3000',    ' '),          #Full-with spaces
                (u'\u00A0',    ' '),          #&nbsp;
-               (u'　',        ' '),          #Full-width spaces
                (u'\t',        ' '),
                ('\r\n',       '\n'),
                ('\n ',        '\n'),
                ('\n\n',       '\n'),         #duplicate paragraph breaks
-               (u'\ue5f1',    ''),           #Unknown weird character in CJK
+               (u'\ue5f1',    ''),           #Some private-use unicode garbage
                ('......',     u'……'),
                ('...',        u'……'),
                (u'。。。。。。',  u'……'),
@@ -395,7 +395,8 @@ def _createDoc(issue):
     logging.info('Connecting MS Word')
     word = win32.gencache.EnsureDispatch('Word.Application')
     logging.info('MS Word API connection succeeded')
-    doc = word.Documents.Open(os.getcwd() + r'\template.dot')
+    logging.info(os.getcwd())
+    doc = word.Documents.Open(os.getcwd().decode(SYSENC) + r'\template.dot')
     logging.info('Template open succeeded. Adding contents.')
 
     ##### Add contents #####
@@ -556,11 +557,14 @@ def _createDoc(issue):
     ### Table of Contents
     rng = doc.Content
     rng.Find.Execute(FindText='[TOC]', ReplaceWith='')
-    doc.TablesOfContents.Add(doc.Range(rng.End, rng.End), True, 1, 2)
-    logging.info('TOC inserted')
+    try:
+        doc.TablesOfContents.Add(doc.Range(rng.End, rng.End), True, 1, 2)
+	logging.info('TOC inserted')
+    except:
+	logging.debug('TOC creation failed')
 
     # Finalizing
-    doc.SaveAs(FileName=(os.getcwd() + '\\' + fullTitle),
+    doc.SaveAs(FileName=(os.getcwd().decode(SYSENC) + u'\\' + fullTitle),
                FileFormat=win32.constants.wdFormatDocument)
     logging.info('File saved')
     word.Visible = True
@@ -609,14 +613,14 @@ def xml2issue(xmlString):
         if item.tag != 'article':
             if item.text is None:
                 item.text = ''
-            setattr(issue, item.tag, item.text)
+            setattr(issue, item.tag, unicode(item.text))
         else:
             article = Article()
             for attr in item:
                 if attr.tag != 'subheadLines':
                     if attr.text is None:
                         attr.text = ''
-                    setattr(article, attr.tag, attr.text)
+                    setattr(article, attr.tag, unicode(attr.text))
                 else:
                     article.subheadLines = []
                     for sub in attr:
