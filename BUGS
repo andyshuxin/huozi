@@ -1,24 +1,16 @@
-1. On Win XP, Highlighting malfunctions for the first or last line, at times.
-
-2. If a subheadline repeats itself in the text, only the first will be
+1. If a subheadline repeats itself in the text, only the first will be
       highlighted in the GUI, but all instances will be bolded in doc file
       created. This is due to the text-based storage system. Until it is
       converted to line number-based, it is unlikely to be solved. Fortunately,
       it's rare that two identical lines exists, and only one is subheadline.
 
+2. Highlighting the first and last line as subhead is temporarily disabled.
+
 3. If a category has no articles under it, it will be ignored in final output.
 
-4. If you input a ratio in SetArticleFrame, but not auto-retrieve it, the
-   ratio will be recorded, even though it's not used.
+4. Can't extract author from: http://my1510.cn/article.php?id=95064
 
-5. Can't extract author from: http://my1510.cn/article.php?id=95064
-
-6. After one article is added, you can click the empty space in listbox, still the modify and delelete
+5. (Windows only) After one article is added, you can click the empty space in listbox, still the modify and delete
    buttons are activated.
 
-7. When an article is selected, and use addarticle, the article in inserted to the end in data strcture,
-   but after the selected article in listbox.
-
-8. The first article has different portrait positioning, even it's the same article insertion code.
-
-9. Use createDoc empties the memory
+6. createDoc empties the clipboard.

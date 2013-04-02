@@ -54,6 +54,16 @@ except IOError:
 
 SYSENC = sys.getfilesystemencoding()
 
+### Not used; to be tested ###
+p = sys.platform
+if p.startswith('linux'):
+    OS = 'linux'
+elif p.startswith('win'):
+    OS = 'win'
+elif p.startswith('darwin'):
+    OS = 'mac'
+### End to be tested ###
+
 MAXSUBLEN = 12        # Any line longer is assumed not subheadline
 SUBTHREDSOLD = 0.4    # How relatively short a line must be to be a sub
 

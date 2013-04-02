@@ -8,10 +8,9 @@ obsolete
 *.txt
 *.log
 *.doc
+*.dot
 
 test*
-Copy*
-
 
 tags
 

@@ -1128,14 +1128,15 @@ class MainFrame(wx.Frame):
             leftMargin = text.find(subhead)
             rightMargin = leftMargin + len(subhead)
             #XXX Duct tape for text similar to one of the subs
-            while (text[leftMargin-1] != '\n' or
-                   text[rightMargin] != '\n'):    # not a standalone line 
-                if (leftMargin == 0 or rightMargin == len(text) or
-                    leftMargin == -1 or rightMargin == -1):
-                       return
-                leftMargin = text.find(subhead, rightMargin)
-                rightMargin = leftMargin + len(subhead)
-            # End duct tape
+            #if DEBUG:
+                #while (text[leftMargin-1] != '\n' or
+                       #text[rightMargin] != '\n'):    # not a standalone line 
+                    #if (leftMargin == 0 or rightMargin == len(text) or
+                        #leftMargin == -1 or rightMargin == -1):
+                           #return
+                    #leftMargin = text.find(subhead, rightMargin)
+                    #rightMargin = leftMargin + len(subhead)
+            ## End duct tape
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   wx.TextAttr('black', 'yellow'))
 
