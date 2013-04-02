@@ -530,7 +530,7 @@ class MainFrame(wx.Frame):
 
     def drawInfoBars(self):
         # TODO: better formatting and add direct editability
-        infoBarBox = wx.BoxSizer(wx.VERTICAL)
+        self.infobarBox = wx.BoxSizer(wx.VERTICAL)
         self.infoBar1 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
                                 style=wx.ALIGN_LEFT)
@@ -542,15 +542,15 @@ class MainFrame(wx.Frame):
                                 style=wx.ALIGN_LEFT)
         self.infoBar4 = wx.StaticText(self.panelInfoBar, wx.ID_ANY, '',
                                 wx.DefaultPosition, wx.DefaultSize,
-                                style=wx.ALIGN_LEFT)
+                                style=wx.ALIGN_LEFT|wx.TE_WORDWRAP)
 
-        infoBarBox.Add(self.infoBar1, 0,
+        self.infobarBox.Add(self.infoBar1, 0,
                        flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
-        infoBarBox.Add(self.infoBar2, 0,
+        self.infobarBox.Add(self.infoBar2, 0,
                        flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
-        infoBarBox.Add(self.infoBar3, 0,
+        self.infobarBox.Add(self.infoBar3, 0,
                        flag=wx.TOP|wx.LEFT|wx.EXPAND, border=5)
-        infoBarBox.Add(self.infoBar4, 0,
+        self.infobarBox.Add(self.infoBar4, 0,
                        flag=wx.TOP|wx.LEFT|wx.BOTTOM|wx.EXPAND, border=5)
 
         self.infoBar1.Bind(wx.EVT_LEFT_DOWN, self.onConfigIssue)
@@ -562,7 +562,7 @@ class MainFrame(wx.Frame):
             boldFont = wx.Font(11, wx.NORMAL, wx.NORMAL, wx.BOLD)
             self.infoBar1.SetFont(boldFont)
 
-        self.panelInfoBar.SetSizerAndFit(infoBarBox)
+        self.panelInfoBar.SetSizerAndFit(self.infobarBox)
 
     def drawArticleListAndButtons(self):
         self.articleList = wx.ListBox(self.panel, wx.ID_ANY,
@@ -630,9 +630,8 @@ class MainFrame(wx.Frame):
 
     def drawTextboxAndButtons(self):
         # Maintext display and editing 
-        self.textBox = wx.TextCtrl(self.panel,
-                                   value='',
-                                   style=wx.TE_MULTILINE|wx.TE_RICH2)
+        self.textBox = wx.TextCtrl(self.panel, value='',
+                           style=wx.TE_MULTILINE|wx.TE_RICH|wx.TE_RICH2)
         self.textBox.SetEditable(False)
         self.vBoxRight.Add(self.textBox, 6,
                            flag=wx.EXPAND|wx.TOP|wx.TE_BESTWRAP, border=5)
@@ -1056,8 +1055,8 @@ class MainFrame(wx.Frame):
         article = self.getSelectedArticle()
 
         # Duct tape
-        if leftMargin == 0 or rightMargin == len(text):
-            return
+        #if leftMargin == 0 or rightMargin == len(text):
+            #return
         # End Ducttap
 
         if line in article.subheadLines:
@@ -1106,7 +1105,10 @@ class MainFrame(wx.Frame):
         authorBio = selectedArticle.authorBio
         self.infoBar2.SetLabel("Article title: " + title)
         self.infoBar3.SetLabel("Author: " + author)
-        self.infoBar4.SetLabel("Author's bio: " + authorBio)
+        if len(authorBio) <= 33:
+            self.infoBar4.SetLabel("Author's bio: " + authorBio)
+        else:
+            self.infoBar4.SetLabel("Author's bio: " + authorBio[:33] + u' ……')
 
     def updateTextBox(self):
 
@@ -1128,15 +1130,24 @@ class MainFrame(wx.Frame):
             leftMargin = text.find(subhead)
             rightMargin = leftMargin + len(subhead)
             #XXX Duct tape for text similar to one of the subs
-            #if DEBUG:
-                #while (text[leftMargin-1] != '\n' or
-                       #text[rightMargin] != '\n'):    # not a standalone line 
-                    #if (leftMargin == 0 or rightMargin == len(text) or
-                        #leftMargin == -1 or rightMargin == -1):
-                           #return
-                    #leftMargin = text.find(subhead, rightMargin)
-                    #rightMargin = leftMargin + len(subhead)
-            ## End duct tape
+            if leftMargin == -1:
+                selectedArticle.delSub(subhead)
+                continue
+            def isStandalone(leftMargin, rightMargin, text):
+                if leftMargin > 0 and rightMargin < len(text):
+                    return (text[leftMargin-1] == '\n' and
+                            text[rightMargin] == '\n')
+                elif leftMargin == 0 and rightMargin < len(text):
+                    return text[rightMargin] == '\n'
+                elif leftMargin > 0 and rightMargin == len(text):
+                    return text[leftMargin-1] == '\n'
+                elif leftMargin == 0 and rightMargin == len(text):
+                    return True
+            while not isStandalone(leftMargin, rightMargin, text):
+                print leftMargin, rightMargin
+                leftMargin = text.find(subhead, rightMargin)
+                rightMargin = leftMargin + len(subhead)
+            # End duct tape
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   wx.TextAttr('black', 'yellow'))
 
