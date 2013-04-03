@@ -255,10 +255,10 @@ class SetArticleFrame(wx.Frame):
             finally:
                 return
 
-        except ValueError:
+        except ValueError as err:
             dlg = wx.MessageDialog(self.panel,
-                                   'Bad threshold ratio!',
-                                   'Bad threshold',
+                                   str(err),
+                                   'Problem occurred',
                                    wx.OK|wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
@@ -471,11 +471,7 @@ class MainFrame(wx.Frame):
         return btn
 
     def drawMainToolbar(self):
-        #self.btnNewIssue = wx.BitmapButton(self.panel, wx.ID_ANY,
-                                           #wx.Bitmap('img/newissue.png'))
-        #icon = wx.Bitmap('img/newissue-d.png')
-        #self.btnNewIssue.SetBitmapDisabled(icon)
-        #self.toolbarBox.Add(self.btnNewIssue)
+
         self.btnNewIssue = self.regToolbarBtn('img/newissue.png',
                                               'img/newissue-d.png')
 
@@ -710,6 +706,12 @@ class MainFrame(wx.Frame):
             self.currentSavePath = ''
 
     def onOpenIssue(self, e):
+        dlgYesNo = wx.MessageDialog(None,
+                                    txt['ConfirmOpenQ'],
+                                    style=wx.YES|wx.NO)
+        if dlgYesNo.ShowModal() != wx.ID_YES:
+            return
+
         dlgOpenPath = wx.FileDialog(None, message=txt['OpenIssueT'],
             wildcard="*.hif")
         if dlgOpenPath.ShowModal() == wx.ID_OK:
@@ -725,7 +727,7 @@ class MainFrame(wx.Frame):
 
         self.issue = xml2issue(content)
         self.updateInfoBar(-1)
-        self.updateTextBox()
+        self.clearTextBox()
         self.updateCatInfo()
         self.refreshArticleListBox()
 
@@ -826,12 +828,12 @@ class MainFrame(wx.Frame):
             return
 
         # Update articleList box
-        cat = BRA_L + cat + BRA_R
+        catInBracket = BRA_L + cat + BRA_R
         pos = self.articleList.GetSelection()
         if pos == -1:
-            self.articleList.Insert(cat, 0)
+            self.articleList.Insert(catInBracket, 0)
         else:
-            self.articleList.Insert(cat, pos)
+            self.articleList.Insert(catInBracket, pos)
         self.updateCatInfo()
 
     def onCreateDoc(self, e):
@@ -849,7 +851,11 @@ class MainFrame(wx.Frame):
             wx.TheClipboard.Close()
 
     def onQuit(self, e):
-        self.Close()
+        dlgYesNo = wx.MessageDialog(None,
+                                    txt['ConfirmQuitQ'],
+                                    style=wx.YES|wx.NO)
+        if dlgYesNo.ShowModal() == wx.ID_YES:
+            self.Close()
 
     def onUp(self, e):
         index = self.articleList.GetSelection()
@@ -933,8 +939,7 @@ class MainFrame(wx.Frame):
                 return
 
             # Update articleList box
-            cat = BRA_L + cat + BRA_R
-            self.articleList.SetString(index, cat)
+            self.articleList.SetString(index, BRA_L+cat+BRA_R)
             self.updateCatInfo()
         else:
             article = self.getSelectedArticle()
@@ -964,7 +969,7 @@ class MainFrame(wx.Frame):
                        self.btnSave):
             button.Enable(False)
         self.updateInfoBar(-1)
-        self.textBox.SetValue('')
+        self.clearTextBox()
         self.updateCatInfo()
 
     def onEditText(self, e):
@@ -1115,7 +1120,7 @@ class MainFrame(wx.Frame):
         if self.articleList.GetSelection() == -1:
             return
         elif _isCat(self.articleList.GetStringSelection()):
-            self.textBox.SetValue('')
+            self.clearTextBox()
             return
 
         index = self.articleList.GetSelection()
@@ -1131,7 +1136,6 @@ class MainFrame(wx.Frame):
             rightMargin = leftMargin + len(subhead)
             #XXX Duct tape for text similar to one of the subs
             if leftMargin == -1:
-                selectedArticle.delSub(subhead)
                 continue
             def isStandalone(leftMargin, rightMargin, text):
                 if leftMargin > 0 and rightMargin < len(text):
@@ -1144,12 +1148,14 @@ class MainFrame(wx.Frame):
                 elif leftMargin == 0 and rightMargin == len(text):
                     return True
             while not isStandalone(leftMargin, rightMargin, text):
-                print leftMargin, rightMargin
                 leftMargin = text.find(subhead, rightMargin)
                 rightMargin = leftMargin + len(subhead)
             # End duct tape
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   wx.TextAttr('black', 'yellow'))
+
+    def clearTextBox(self, *args):
+        self.textBox.SetValue('')
 
     def updateCatInfo(self):
         cat = ''
@@ -1158,7 +1164,7 @@ class MainFrame(wx.Frame):
             if _isCat(item):
                 cat = item[1:-1]
             else:
-                for article in self.issue.articleList:
+                for article in self.issue:
                     if article.title == item:
                         article.category = cat
                         break
@@ -1195,6 +1201,8 @@ class MainFrame(wx.Frame):
         return res
 
     def getSelectedArticle(self):
+        """ Return the article in self.issue that matches the selected string
+            in listbox."""
         selectedTitle = self.articleList.GetStringSelection()
         for article in self.issue:
             if article.title == selectedTitle:
@@ -1202,15 +1210,7 @@ class MainFrame(wx.Frame):
         return None
 
     def printIssue(self, e=None):
-        s = issue2xml(self.issue).splitlines()
-        for line in s:
-            try:
-                posA = line.index('>')
-                posB = line.index('<', posA)
-            except ValueError:
-                continue
-            if (posA + 1 != posB) or ('article' in line):
-                print line
+        print issue2xml(self.issue)
 
 def _isCat(title):
     """Return if title is surrounded by square brackets"""

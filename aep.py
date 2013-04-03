@@ -91,8 +91,11 @@ BRA_L, BRA_R = u'【', u'】'
 
 MAGIC_WIDTH = 120.0   # useful in portrait positioning
 
-ascii_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-digits = '0123456789'
+ASCII_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+DIGITS = '0123456789'
+
+FALLBACKENC = 'utf-8'
+
 #####  Data strcture  #####
 
 class Article(object):
@@ -129,11 +132,15 @@ class Article(object):
         if comm in self.comments:
             self.comments.remove(comm)
 
-    def loadURL(self, url, issue, ratio=None,
-                    detectDuplicate=False):
-        """Adding one article, giving the user more control.
-        If ratio is not given, try 0.5, then if there are too few contents,
-        try 0.4, then 0.3...
+    def loadURL(self, url, issue, ratio=None, detectDuplicate=False):
+        """
+        Load self with the contents of what url directs to.
+        Use analyseHTML to extract main text and guess author and subheads.
+        Implicitly calling cleanText to clean title and main text.
+
+        Input: url, str or unicode
+               issue: the issue the article is in; only to check duplicates.
+               ratio: the thresold ratio for main text extraction.
         """
 
         if len(url) <= 2:
@@ -154,11 +161,11 @@ class Article(object):
             raise RuntimeError(url, "Can't extract content!")
 
         meta = analysis[1]
-        self.title=meta['title']
-        self.author=meta['author']
-        self.text=mainText
-        self.subheadLines=meta['sub']
-        self.url=url
+        self.title = meta['title']
+        self.author = meta['author']
+        self.text = mainText
+        self.subheadLines = meta['sub']
+        self.url = url
         self.ratio = unicode(ratio)
 
     def copy(self):
@@ -166,18 +173,20 @@ class Article(object):
 
 class Issue(object):
 
-    def __init__(self, issueNum='', grandTitle='', ediRemark=''):
+    def __init__(self, issueNum='999', grandTitle='', ediRemark=''):
         self.issueNum = issueNum
         self.grandTitle = grandTitle
         self.ediRemark = ediRemark
         self.articleList = []
 
     def addArticle(self, article, pos=None):
+        """ Insert article to the article list, by default to the end. """
         if pos is None or pos == -1:
             pos = len(self.articleList)
         self.articleList.insert(pos, article)
 
     def deleteArticle(self, article):
+        """ Delete article from article list. """
         self.articleList.remove(article)
 
     def replaceArticle(self, articleToDelete, articleToAdd):
@@ -192,26 +201,33 @@ class Issue(object):
     def __iter__(self):
         for article in self.articleList:
             yield article
+        # So that (for article in issue:) works.
 
 #####  Clearner module  #####
 
 def _isChinese(char):
-    return 0x4e00 <= ord(char) < 0x9fa6
+    """ A very rough approximation. Produces false negatives. """
+    return 0x4E00 <= ord(char) < 0x9FCC
 
-def cleanText(inputText, patternBook=CLEANERBOOK):
+def cleanText(text, patternBook=CLEANERBOOK):
+    """
+    Replace contents according to patterns in patternBook, delete all spaces
+    next to Chinese characters, and combine consective spaces.
+    """
 
     logging.info('cleanText running '+str(datetime.now()))
-    if len(inputText) >= 20:
-        logging.info('cleanText input: %s ...' % inputText[20])
+    if len(text) > 20:
+        logging.info('cleanText input: %s ...' % text[20])
+    else:
+        logging.info('cleanText input: %s ...' % text)
 
-    if len(inputText) <= 2:
-        return inputText
+    if len(text) <= 2:
+        return text
 
-    text = inputText
     for patternPair in patternBook:
-        key = patternPair[0]
+        key, replacement = patternPair[0], patternPair[1]
         while key in text:
-            text = text.replace(key, patternPair[1])
+            text = text.replace(key, replacement)
 
     text = text.strip(' \n')
 
@@ -230,7 +246,7 @@ def cleanText(inputText, patternBook=CLEANERBOOK):
     logging.info('cleanText about to return')
     return text
 
-#####  HTML Analyser Module  #####
+#####  HTML Analyser #####
 
 def _markerPos(html, markers):
     for marker in markers:
@@ -328,9 +344,12 @@ def analyseHTML(htmlText, ratio=None):
     """
     Input: htmlText, a string, which is a html file;
            ratio, the thresold ratio to be used in main text extraction.
-    Output: a tuple, first element being the content part of the html,
-            and the second element being a dictionary mapping meta labels
-            with their values.
+           If ratio is not given, try 0.5, then if there are too
+           few contents, try 0.4, then 0.3...
+    Return: a tuple (maintext, metaInfo) -
+                the first element is the content part of the html,
+                and the second element is a dictionary mapping meta labels
+                with their values.
     """
 
     logging.info('analyseHtml running '+str(datetime.now()))
@@ -354,10 +373,9 @@ def analyseHTML(htmlText, ratio=None):
     logging.info('analyseHtml about to return')
     return (mainText, meta)
 
-#####  Grabber module  #####
+#####  Grabber #####
 
 def urlClean(url):
-    url = url.encode('utf-8')
     if url[:4] != 'http':
         url = 'http://' + url
     return url
@@ -365,11 +383,11 @@ def urlClean(url):
 def grab(url):
 
     """
-    Input: a URL to a webpage
-    Output: the webpage, or an exception instance, if error occurs.
-    Automatically extract charset, if specified, and convert to UTF-8.
-    Will autodetect if charset is not defined. When all other
-    measures fail, assume UTF-8 and carry on.
+    Input: a URL to a webpage. (doc and pdf support to be done)
+    Output: the webpage.
+    Will extract charset declaration, if specified, and decode. If not,
+    try to call chardet to detect. If that fails (either chardet is absent or
+    chardet can't determine), assume UTF-8.
     """
 
     logging.info('grab running '+str(datetime.now()))
@@ -398,12 +416,13 @@ def grab(url):
 
     def _isLegit(char):
         """ Return true if char can be part of a charset statement """
-        if (char in ascii_letters or
-            char in digits or
+        if (char in ASCII_LETTERS or
+            char in DIGITS or
             char == '-'):
            return True
         return False
 
+    url = url.encode(SYSENC)
     userAgent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; Huozi)'
     req = urllib2.Request(url, headers={'User-Agent': userAgent})
     opener = urllib2.build_opener(SmartRedirectHandler(),
@@ -438,7 +457,7 @@ def grab(url):
     logging.info('grab about to return')
     return html
 
-##### .doc Export module #####
+##### MS .doc Formatter #####
 
 def createDoc(issue):
     _createDoc(issue)
@@ -448,7 +467,16 @@ def createDoc(issue):
     win32clipboard.CloseClipboard()
 
 def _createDoc(issue):
+
     """Polutes clipboard! Use with caution!"""
+
+    def _getPublishDate():
+        today = date.today()
+        for offset in range(7):
+            pubDay = today + timedelta(days=offset)
+            if pubDay.weekday() == 4:  #Friday
+                break
+        return pubDay.timetuple()[:3]
 
     logging.info('Doc creation module running %s' % str(datetime.now()))
     logging.info('Connecting MS Word')
@@ -473,12 +501,7 @@ def _createDoc(issue):
     logging.info("editor's remark processed")
 
     ## Header
-    today = date.today()
-    for offset in range(7):
-        pubDay = today + timedelta(days=offset)
-        if pubDay.weekday() == 4:  #Friday
-            break
-    year, month, day = pubDay.timetuple()[:3]
+    year, month, day = _getPublishDate()
     pubDayS = str(year) + u'年' + str(month) + u'月' + str(day) + u'日'
     fullTitle = (u'第' + issue.issueNum + u'期' +
                  ' ' + issue.grandTitle)
