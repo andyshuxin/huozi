@@ -25,3 +25,8 @@
 10. Pops 'lost unsaved progress' warning even when there is none.
 
 11. After I click infobar to config issue, article info are gone.
+
+12. TOC creation fails with 'out of range' from time to time.
+
+13. subtitle setting needs further work. use subtitle, which is set independet from Normal,
+    heading level 0, instead of heading 3
