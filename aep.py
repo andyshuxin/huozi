@@ -178,10 +178,13 @@ class Article(object):
 
 class Issue(object):
 
-    def __init__(self, issueNum='999', grandTitle='', ediRemark=''):
+    def __init__(self, issueNum='999', grandTitle='', ediRemark='',
+                 coverImagePath='', publishDate= ('', '', '')):
         self.issueNum = issueNum
         self.grandTitle = grandTitle
         self.ediRemark = ediRemark
+        self.coverImagePath = coverImagePath
+        self.publishDate = publishDate
         self.articleList = []
 
     def addArticle(self, article, pos=None):
@@ -212,6 +215,10 @@ class Issue(object):
         grandTitle.text = self.grandTitle
         ediRemark = etree.SubElement(root, "ediRemark")
         ediRemark.text = self.ediRemark
+        coverImagePath = etree.SubElement(root, "coverImagePath")
+        coverImagePath.text = self.coverImagePath
+        publishDate = etree.SubElement(root, "publishDate")
+        publishDate.text = ','.join(self.publishDate)
 
         for article in self:
             articleElement = etree.SubElement(root, "article")
@@ -238,7 +245,11 @@ class Issue(object):
             if item.tag != 'article':
                 if item.text is None:
                     item.text = ''
-                setattr(self, item.tag, unicode(item.text))
+                if item.tag == 'publishDate':
+                    self.publishDate = item.text.split(',')
+                    print 'plubshiDate:', self.publishDate
+                else:
+                    setattr(self, item.tag, unicode(item.text))
             else:
                 article = Article()
                 for attr in item:

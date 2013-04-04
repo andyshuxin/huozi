@@ -58,9 +58,10 @@ import wx
 from aep import (Article, Issue,
                  urlClean, cleanText,
                  BRA_L, BRA_R,)
-
+from datetime import date, datetime, timedelta
 if __language__ == "English":
     from text_en import txt
+    from text_en import weekdays
 import bride
 
 ##### Constants #####
@@ -75,6 +76,52 @@ except IOError:
 
 MAGIC_HEIGHT = 90.0   # used in AddArticlesFrame, for portrait display
 
+
+class ChooseImageFrame(wx.Frame):
+
+    def __init__(self, *args, **kwargs):
+        super(ChooseImageFrame, self).__init__(None, *args, **kwargs)
+        self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
+        self.SetTitle(txt['ConfigIssueT'])
+        self.drawUI()
+        self.Layout()
+        self.SetSize((600, 600))
+        self.Centre()
+        self.Show(True)
+
+    def drawUI(self):
+        self.panel = wx.Panel(self, wx.ID_ANY)
+        self.box = wx.BoxSizer(wx.VERTICAL)
+        self.imageBox = wx.StaticBitmap(self.panel, wx.ID_ANY,
+                                        size=(500, 500))
+        self.imageBox.SetBitmap(wx.EmptyImage(500, 500).ConvertToBitmap())
+        self.box.Add(self.imageBox, 1, flag=wx.EXPAND)
+        self.btnOK = wx.Button(self.panel, label='&Confirm')
+        self.btnCancel = wx.Button(self.panel, label='C&ancel')
+        self.box.Add(self.btnOK, 0)
+        self.box.Add(self.btnCancel, 0, flag=wx.TOP, border=5)
+        self.btnOK.Bind(wx.EVT_BUTTON, self.onOK)
+        self.btnCancel.Bind(wx.EVT_BUTTON, self.onCancel)
+
+    def getPath(self):
+        path = self.askPortraitPath()
+        if path:
+            img = wx.Image(path, wx.BITMAP_TYPE_ANY)
+            w, h = img.GetSize()
+            if h > MAGIC_HEIGHT:
+                w = w * MAGIC_HEIGHT / h
+                h = MAGIC_HEIGHT
+                img.Rescale(w, h)
+            img = img.ConvertToBitmap()
+            self.imageBox.SetBitmap(img)
+        return path
+
+    def onOK(self, event):
+        pass
+
+    def onCancel(self, event):
+        pass
+
 ##### Window of Adding one Article #####
 
 class SetArticleFrame(wx.Frame):
@@ -84,6 +131,7 @@ class SetArticleFrame(wx.Frame):
 
     def __init__(self, articleArgv=None, *args, **kwargs):
         super(SetArticleFrame, self).__init__(*args, **kwargs)
+        self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
 
         self.targetArticle = articleArgv
         if articleArgv is None:
@@ -103,7 +151,8 @@ class SetArticleFrame(wx.Frame):
 
     def askPortraitPath(self):
         dlgPortrait = wx.FileDialog(None, message=txt['PortraitT'],
-            wildcard="Images|*.jpg;*.jpeg;*.gif;*.png;*.bmp")
+            wildcard="Images|*.jpg;*.jpeg;*.gif;*.png;*.bmp",
+            style=wx.FD_OPEN|wx.FD_PREVIEW)
         if dlgPortrait.ShowModal() == wx.ID_OK:
             portraitPath = dlgPortrait.GetPath()
             dlgPortrait.Destroy()
@@ -345,6 +394,7 @@ class AddArticlesFrame(wx.Frame):
 
     def __init__(self, *args, **kwargs):
         super(AddArticlesFrame, self).__init__(*args, **kwargs)
+        self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
         self.hBox = wx.BoxSizer(wx.HORIZONTAL)
         self.vBox1 = wx.BoxSizer(wx.VERTICAL)
         self.vBox2 = wx.BoxSizer(wx.VERTICAL)
@@ -416,7 +466,185 @@ class AddArticlesFrame(wx.Frame):
         self.GetParent().Enable()
         self.Destroy()
 
-class TutorialFrame(object):
+class ConfigIssueFrame(wx.Frame):
+
+    def askPortraitPath(self, *args):   #TODO: Combine with duplicates
+        dlgPortrait = wx.FileDialog(None, message=txt['PortraitT'],
+            wildcard="Images|*.jpg;*.jpeg;*.gif;*.png;*.bmp",
+            style=wx.FD_OPEN|wx.FD_PREVIEW)
+        if dlgPortrait.ShowModal() == wx.ID_OK:
+            portraitPath = dlgPortrait.GetPath()
+            dlgPortrait.Destroy()
+        else:
+            portraitPath = None
+        return portraitPath
+
+    def _getPublishDate(self):
+        """ Return (year, month, day) of the coming Friday.
+            If today is Friday, return date of today.  """
+        today = date.today()
+        for offset in range(7):
+            pubDay = today + timedelta(days=offset)
+            if pubDay.weekday() == 4:  #Friday
+                break
+        return (str(i) for i in pubDay.timetuple()[:3])
+
+    def __init__(self, currentIssue, *args, **kwargs):
+        self.targetIssue = currentIssue
+
+        super(ConfigIssueFrame, self).__init__(parent=None, *args, **kwargs)
+        self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
+        self.SetTitle(txt['ConfigIssueT'])
+        self.drawUI()
+        self.Layout()
+        self.SetSize((450, 600))
+        self.Centre()
+        self.Show(True)
+
+    def drawUI(self):
+        self.panel = wx.Panel(self, wx.ID_ANY)
+        self.vBox = wx.BoxSizer(wx.VERTICAL)
+
+        # Grand title block
+        self.hintGrandTitle = wx.StaticText(self.panel, wx.ID_ANY,
+                              txt['hintGrandTitle'],
+                              style=wx.ALIGN_LEFT)
+        self.textGrandTitle = wx.TextCtrl(self.panel,
+                                          value=self.targetIssue.grandTitle)
+        self.vBox.Add(self.hintGrandTitle, 0, flag=wx.EXPAND|wx.ALL, border=10)
+        self.vBox.Add(self.textGrandTitle, 0,
+                      flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM,
+                      border=10)
+
+        # Publish date block
+        self.hintPublishDate = wx.StaticText(self.panel, wx.ID_ANY,
+                                             txt['hintPublishDate'])
+        self.vBox.Add(self.hintPublishDate, 0,
+                      flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM,
+                      border=10)
+        year, month, day = self.targetIssue.publishDate
+        if year == '' and month == '' and day == '':
+            year, month, day = self._getPublishDate()
+        self.textYear = wx.TextCtrl(self.panel, value=year)
+        self.textMonth = wx.TextCtrl(self.panel, value=month)
+        self.textDay = wx.TextCtrl(self.panel, value=day)
+        self.hintYear = wx.StaticText(self.panel, wx.ID_ANY,
+                                      txt['hintYear'],)
+        self.hintMonth = wx.StaticText(self.panel, wx.ID_ANY,
+                                       txt['hintMonth'],)
+        self.hintDay = wx.StaticText(self.panel, wx.ID_ANY,
+                                     txt['hintDay'],)
+        self.hintWeekday = wx.StaticText(self.panel, wx.ID_ANY,
+                                         '',)
+        self.onDateChange(None)
+        self.hBoxDate = wx.BoxSizer(wx.HORIZONTAL)
+        for ctrl in (self.hintYear, self.textYear,
+                     self.hintMonth, self.textMonth,
+                     self.hintDay, self.textDay,):
+            self.hBoxDate.Add(ctrl, 0)
+        self.hBoxDate.Add(self.hintWeekday, flag=wx.LEFT, border=5)
+
+        for text in (self.textYear, self.textMonth, self.textDay):
+            text.Bind(wx.EVT_TEXT, self.onDateChange)
+        self.vBox.Add(self.hBoxDate, 0,
+                      flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM,
+                      border=10)
+
+        # Issue number block
+        self.hBoxIssueNum = wx.BoxSizer(wx.HORIZONTAL)
+        self.hintIssueNum = wx.StaticText(self.panel, wx.ID_ANY,
+                                          txt['hintIssueNum'],)
+        self.textIssueNum = wx.TextCtrl(self.panel,
+                                        value=self.targetIssue.issueNum)
+        self.btnGuessIssueNum = wx.Button(self.panel, -1,
+                                          txt['btnGuessIssueNum'])
+        self.hBoxIssueNum.Add(self.hintIssueNum)
+        self.hBoxIssueNum.Add(self.textIssueNum)
+        self.hBoxIssueNum.Add(self.btnGuessIssueNum)
+        self.vBox.Add(self.hBoxIssueNum, 0,
+                      flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM,
+                      border=10)
+
+        # Editor's remark block
+        self.hintEdiRemark = wx.StaticText(self.panel, wx.ID_ANY,
+                                           txt['hintEdiRemark'])
+        self.textEdiRemark = wx.TextCtrl(self.panel, wx.ID_ANY,
+                                         value=self.targetIssue.ediRemark,
+                                         style=wx.TE_MULTILINE)
+        self.vBox.Add(self.hintEdiRemark, 0,
+                      flag=wx.EXPAND|wx.LEFT|wx.RIGHT,
+                      border=10)
+        self.vBox.Add(self.textEdiRemark, 1,
+                      flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM,
+                      border=10)
+        # Cover Image
+        self.hBoxCoverImage = wx.BoxSizer(wx.HORIZONTAL)
+        self.btnSetCoverImage = wx.Button(self.panel, label='&Set Cover')
+        self.btnSetCoverImage.Bind(wx.EVT_BUTTON, self.onChangeCoverImage)
+        self.btnClearCoverImage = wx.Button(self.panel, label='&Clear Cover')
+        self.btnClearCoverImage.Bind(wx.EVT_BUTTON, self.onClearCoverImage)
+        self.hBoxCoverImage.Add(self.btnSetCoverImage, 0,
+                      flag=wx.EXPAND|wx.LEFT|wx.BOTTOM,
+                      border=10)
+        self.hBoxCoverImage.Add(self.btnClearCoverImage, 0,
+                      flag=wx.EXPAND|wx.RIGHT|wx.BOTTOM,
+                      border=10)
+        self.vBox.Add(self.hBoxCoverImage, 0, flag=wx.EXPAND)
+
+        # OK and Cancel buttons
+        self.hBoxBtns = wx.BoxSizer(wx.HORIZONTAL)
+        self.btnOK = wx.Button(self.panel, label='&OK!')
+        self.btnCancel = wx.Button(self.panel, label='&Cancel')
+        self.hBoxBtns.Add(self.btnOK, 0)
+        self.hBoxBtns.Add(self.btnCancel, 0)
+        self.btnOK.Bind(wx.EVT_BUTTON, self.onOK)
+        self.btnCancel.Bind(wx.EVT_BUTTON, self.onCancel)
+        self.vBox.Add(self.hBoxBtns, 0,
+                      flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM,
+                      border=10)
+
+        self.panel.SetSizerAndFit(self.vBox)
+
+    def onOK(self, event):
+        self.targetIssue.grandTitle = self.textGrandTitle.GetValue()
+        self.targetIssue.issueNum = self.textIssueNum.GetValue()
+        self.targetIssue.ediRemark = self.textEdiRemark.GetValue()
+        year = self.textYear.GetValue()
+        month = self.textMonth.GetValue()
+        day = self.textDay.GetValue()
+        self.targetIssue.publishDate = (year, month, day)
+        self.Destroy()
+
+    def onCancel(self, event):
+        self.Destroy()
+
+    def onDateChange(self, event):
+        try:
+            year = int(self.textYear.GetValue())
+            if year < 2000:
+                raise ValueError
+            month = int(self.textMonth.GetValue())
+            day = int(self.textDay.GetValue())
+            pubDay = date(year, month, day)
+        except ValueError:
+            self.hintWeekday.SetLabel('Date invalid!')
+        else:
+            weekday = weekdays[pubDay.weekday()]
+            self.hintWeekday.SetLabel(weekday)
+
+    def onChangeCoverImage(self, e):
+        path = self.askPortraitPath(self)   #TODO: Combine with duplicates
+        if path:
+            self.targetIssue.coverImagePath = path
+
+    def onClearCoverImage(self, e):
+        dlgYesNo = wx.MessageDialog(None,
+                                    txt['ClearCover'],
+                                    style=wx.YES|wx.NO)
+        if dlgYesNo.ShowModal() == wx.ID_YES:
+            self.targetIssue.coverImagePath = ''
+
+class TutorialFrame(wx.Frame):
     pass
 
 
@@ -429,6 +657,31 @@ class MainFrame(wx.Frame):
         self.issue = currentIssue
         self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
         self.drawUI()
+
+    def drawUI(self):
+
+        self.drawPanels()
+        self.drawBoxSizers()
+        self.drawMainToolbar()
+        self.drawInfoBars()
+        self.drawArticleListAndButtons()
+        self.drawTextboxAndButtons()
+
+        if DEBUG:
+            self.btnAddArticle.Enable(True)
+            self.btnAddArticles.Enable(True)
+            self.btnAddCategory.Enable(True)
+            self.btnExport.Enable()
+            self.btnConfigIssue.Enable()
+
+        self.Layout()
+        self.SetSize((800, 600))
+        self.basicTitle = u'Tool Simple'
+        self.SetTitle(self.basicTitle)
+        self.Centre()
+        self.Show(True)
+
+        self.currentSavePath = ''
 
     def drawPanels(self):
         self.panel = wx.Panel(self, wx.ID_ANY)
@@ -664,32 +917,6 @@ class MainFrame(wx.Frame):
             self.hBoxBottom.Add(btnDev, 0)
             self.Bind(wx.EVT_BUTTON, self.printIssue, btnDev)
 
-
-    def drawUI(self):
-
-        self.drawPanels()
-        self.drawBoxSizers()
-        self.drawMainToolbar()
-        self.drawInfoBars()
-        self.drawArticleListAndButtons()
-        self.drawTextboxAndButtons()
-
-        if DEBUG:
-            self.btnAddArticle.Enable(True)
-            self.btnAddArticles.Enable(True)
-            self.btnAddCategory.Enable(True)
-            self.btnExport.Enable()
-            self.btnConfigIssue.Enable()
-
-        self.Layout()
-        self.SetSize((800, 600))
-        self.basicTitle = u'Tool Simple'
-        self.SetTitle(self.basicTitle)
-        self.Centre()
-        self.Show(True)
-
-        self.currentSavePath = ''
-
     def onNewIssue(self, e):
         dlgYesNo = wx.MessageDialog(None,
                                     txt['ConfirmNewQ'],
@@ -778,24 +1005,8 @@ class MainFrame(wx.Frame):
         Set the basic information of the current issue.
         """
 
-        issueNum = self.askInfo(txt['issueNumQ'],
-                                txt['issueNumT'],
-                                defaultVal=self.issue.issueNum)
-        grandTitle = self.askInfo(txt['grandTitleQ'],
-                                  txt['grandTitleT'],
-                                  defaultVal=self.issue.grandTitle)
 
-        ediRemark = self.askInfo(txt['ediRemarkQ'],
-                                 txt['issueNumT'],
-                                 defaultVal=self.issue.ediRemark,
-                                 multiline=True)
-
-        if issueNum is not None:
-            self.issue.issueNum = issueNum
-        if grandTitle is not None:
-            self.issue.grandTitle = grandTitle
-        if ediRemark is not None:
-            self.issue.ediRemark = ediRemark
+        ConfigIssueFrame(self.issue)
 
         self.btnAddArticle.Enable(True)
         self.btnAddArticles.Enable(True)
@@ -1199,7 +1410,8 @@ class MainFrame(wx.Frame):
         return None
 
     def printIssue(self, e=None):
-        print self.issue.toXML()
+        print 'coverImagePath:', self.issue.coverImagePath
+        #print self.issue.toXML()
 
 def _isCat(title):
     """Return if title is surrounded by square brackets"""
