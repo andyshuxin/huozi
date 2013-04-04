@@ -247,7 +247,6 @@ class Issue(object):
                     item.text = ''
                 if item.tag == 'publishDate':
                     self.publishDate = item.text.split(',')
-                    print 'plubshiDate:', self.publishDate
                 else:
                     setattr(self, item.tag, unicode(item.text))
             else:

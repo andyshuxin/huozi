@@ -636,6 +636,7 @@ class ConfigIssueFrame(wx.Frame):
         path = self.askPortraitPath(self)   #TODO: Combine with duplicates
         if path:
             self.targetIssue.coverImagePath = path
+        self.Raise()
 
     def onClearCoverImage(self, e):
         dlgYesNo = wx.MessageDialog(None,
@@ -1006,6 +1007,7 @@ class MainFrame(wx.Frame):
         """
 
 
+        self.Disable()
         ConfigIssueFrame(self.issue)
 
         self.btnAddArticle.Enable(True)
