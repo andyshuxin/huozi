@@ -9,7 +9,8 @@ obsolete
 *.txt
 *.log
 *.doc
-*.dot
+*.wbk
+~*
 
 test*
 
