@@ -6,7 +6,7 @@
 
 # Copyright (C) 2013 Shu Xin
 
-__version__ = '0.80'
+__version__ = '0.81'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
@@ -30,13 +30,13 @@ logging.info('The Bride running '+str(datetime.now()))
 def createDocx(issue):
     pass #TODO
 
-def createDoc(issue, savePath=None, templatePath=None):
+def createDoc(issue, savePath=None, templatePath=None, quitWord=False):
     """Create a doc based on template.dot and fill in the contents of issue."""
     if savePath is None:
         savePath = os.getcwd().decode(SYSENC) + '\\' + _getFullTitle(issue)
     if templatePath is None:
         templatePath = os.getcwd().decode(SYSENC) + r'\template.dot'
-    _createDoc(issue, savePath, templatePath)
+    _createDoc(issue, savePath, templatePath, quitWord)
 
     win32clipboard.OpenClipboard()
     win32clipboard.EmptyClipboard()
@@ -44,16 +44,21 @@ def createDoc(issue, savePath=None, templatePath=None):
 
     return savePath + '.doc'  #TODO: what if savePath is specified?
 
-def _createDoc(issue, savePath, templatePath):
+def _createDoc(issue, savePath, templatePath, quitWord):
     word, doc = _initialize(issue, savePath, templatePath)
-    _setCoverPage(doc, issue)
-    _addEditorRemark(doc.Content, issue)
-    _setHeaders(doc, issue)
-    _copyTeaser(word)
-    _addArticles(doc, issue)
-    _addPortraitAndBio(doc, issue)
-    _setTOC(doc.Content)
-    _finalize(word, doc)
+    try:
+        _setCoverPage(doc, issue)
+        _addEditorRemark(doc.Content, issue)
+        _setHeaders(doc, issue)
+        _copyTeaser(word)
+        _addArticles(doc, issue)
+        _addPortraitAndBio(doc, issue)
+        _setTOC(doc.Content)
+    except:
+        word.Visible = True
+    finally:
+        _SeparateLongTitles(doc, issue)
+        _finalize(word, doc, quitWord)
 
 def _getFullTitle(issue):
     return u'第' + issue.issueNum + u'期' + ' ' + issue.grandTitle
@@ -63,7 +68,6 @@ def _initialize(issue, savePath, templatePath):
     logging.info('Connecting MS Word')
 
     word = win32.gencache.EnsureDispatch('Word.Application')
-    word.Visible = False
 
     logging.info('MS Word API connection succeeded')
 
@@ -72,8 +76,11 @@ def _initialize(issue, savePath, templatePath):
     logging.info('Template open succeeded. Adding contents.')
 
     fullTitle = _getFullTitle(issue)
-    doc.SaveAs(FileName=savePath.encode(SYSENC),
-               FileFormat=win32.constants.wdFormatDocument)
+    try:
+        doc.SaveAs(FileName=savePath.encode(SYSENC),
+                   FileFormat=win32.constants.wdFormatDocument)
+    except:
+        raise RuntimeError("Fail to save file.")
     logging.info('File saved')
 
     return word, doc
@@ -90,7 +97,7 @@ def _setCoverPage(doc, issue):
                               LinkToFile=False,
                               SaveWithDocument=True,
                               Left=0,
-                              Top=-10,
+                              Top=-12,
                               Width=A4_WIDTH,
                               Height=A4_HEIGHT,
                               Anchor=rng)
@@ -145,6 +152,8 @@ def _addArticles(doc, issue):
             rng.InsertAfter(article.title + '\r\n')
         rng.Style = win32.constants.wdStyleHeading2
         rng.Collapse( win32.constants.wdCollapseEnd )
+        article.finalTitle = (str(articleCount) + '-' + str(count-1) + ' ' +
+                              article.author + u'：' + article.title)
         logging.info('Title "%s" inserted' % article.title)
 
         # Teaser
@@ -166,7 +175,7 @@ def _addArticles(doc, issue):
             rng.InsertAfter(line + '\r\n')
             rng.Style = win32.constants.wdStyleNormal
             if line in article.subheadLines:
-                rng.Style = win32.constants.wdStyleHeading3
+                rng.Style = win32.constants.wdStyleSubtitle
         rng.InsertAfter('\r\n')
         rng.Collapse( win32.constants.wdCollapseEnd )
         logging.info('Main text inserted, length=%s' % str(len(article.text)))
@@ -234,6 +243,38 @@ def _addPortraitAndBio(doc, issue):
         rng.Style = win32.constants.wdStyleHeading5
         logging.info('portrait and bio inserted')
 
+def _SeparateLongTitles(doc, issue):
+    """ Find titles that are too long and separate at colon, if any.
+        It's more efficient to combine the steps in _addArticle(),
+        but a separate procedure has the advantage that if something
+        screws up here, more critical steps would have been finished already.
+    """
+
+    def _isFullWidth(char):
+        #TODO: write a more precise one
+        from aep import _isCJKHan
+        return _isCJKHan(char)
+
+    for article in issue:
+        wordCount = 0.0
+        for char in article.finalTitle:
+            if _isFullWidth(char):
+                wordCount += 1
+            else:
+                wordCount += 0.5
+        logging.info(u'weighted length: %s' % str(wordCount))
+        logging.info('checking %s' % article.finalTitle)
+        if wordCount > 21:
+            try:
+                rng = doc.Range()
+                rng.Find.Execute(FindText=article.finalTitle)
+                pos = article.finalTitle.rindex(u'：')
+                rng = doc.Range(rng.Start+pos+1, rng.Start+pos+1)
+                rng.InsertBreak(win32.constants.wdLineBreak)
+            except ValueError:
+                #No u'：', something is wrong.
+                continue
+
 def _setTOC(rng):
     rng.Find.Execute(FindText='[TOC]', ReplaceWith='')
     try:
@@ -242,9 +283,10 @@ def _setTOC(rng):
     except:
         logging.debug('TOC creation failed')
 
-def _finalize(word, doc):
+def _finalize(word, doc, quitWord):
     doc.Save()
-    word.Quit()
+    if quitWord:
+        word.Quit()
 
 def openDoc(path):
     word = win32.gencache.EnsureDispatch('Word.Application')
