@@ -1,15 +1,22 @@
 Huozi
 =======
-Huozi is a GUI wrapper around AEP (see below) that facilitates production of an online magazine. Huozi grew out of the experiences of me editing and supervising production of 1510 Weekly.
-For the moment, Huozi is customized for 1510 Weekly production, hence Chinese-oriented.
+Huozi is a package of automated document manipulators, tailored for efficient production of electronic digest-type weekly magazines which requires little fancy. Huozi grew out of my experiences of editing and producing of 1510 Weekly, which is why for the moment, Huozi is customized for 1510 Weekly production, and Chinese-oriented.
 The package is under development and far from decent usability.
+In Chinese, Huozi means 'movable type', 'lively words', or 'animated words'.
+
+## Tool Simple
+Tool simple is the GUI. 
 
 ## AEP
-Automated E-Digest Processor is a package that provides tools for editors of electronic digest-type magazine.
-It includes these tools:
-+ A text cleaner that removes redundant spaces, blank lines, and unify punctuation marks.
-+ A html parser that extract its main text and guess title, author, and where the sub-headlines lies.
-+ A grabber that grabs a URL, Unicode supported.
+AEP, or Automated E-Digest Preprocessor, includes these tools:
++ Issue Class and Article Class, corresponding to an issue of a magazine and an article in it;
++ Text cleaner that removes redundant spaces, blank lines, and unify punctuation marks;
++ Html analyser that extract its main text and guess title, author, and where the sub-headlines lies; and
++ Grabber that handles .
+
+## The Bride
+The Bride is the Microsoft Word document formatter.
+The naming has nothing to do with Kill Bill.
 
 ## Requirments
 + Python 2.7 (not tested on other versions)
@@ -27,4 +34,4 @@ For a closer look at the structure of the package, see [package structure](https
 
 
 ## Author
-My name is Andy Shu Xin. I am a Hong Kong-based journalist and volunteer with a non-profit organization  [Co-China forum](https://cochina.org). I picked up programming since January 2013 and I am more ambitious than my capabilities. So please expect nothing better than chaotic design, horrible mistakes, and spaghetti code style.
+My name is Andy Shu. I am a Hong Kong-based journalist and volunteer with a non-profit organization  [Co-China forum](https://cochina.org). I picked up programming in January 2013. So please expect nothing better than chaotic design, horrible mistakes, and spaghetti code style.
