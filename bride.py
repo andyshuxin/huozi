@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# The Bride, a Microsoft Word template manipulator.
+# The Bride, a Microsoft Word document formatter.
 
 # Currently, the module is customized for production of 1510 Weekly.
 
@@ -24,8 +24,7 @@ except ImportError:
 from aep import SYSENC, BRA_L, BRA_R
 MAGIC_WIDTH = 120.0 # roughly equals to left page margin
 
-logging.basicConfig(filename='bride.log', level=logging.DEBUG)
-logging.info('\r\n' + '='*30)
+logging.info('\r\n' + '*'*3)
 logging.info('The Bride running '+str(datetime.now()))
 
 def createDocx(issue):
@@ -43,11 +42,11 @@ def createDoc(issue, savePath=None, templatePath=None):
     win32clipboard.EmptyClipboard()
     win32clipboard.CloseClipboard()
 
-    return savePath + '.doc'
+    return savePath + '.doc'  #TODO: what if savePath is specified?
 
 def _createDoc(issue, savePath, templatePath):
     word, doc = _initialize(issue, savePath, templatePath)
-    _setCoverPage(doc.Content, issue)
+    _setCoverPage(doc, issue)
     _addEditorRemark(doc.Content, issue)
     _setHeaders(doc, issue)
     _copyTeaser(word)
@@ -55,16 +54,6 @@ def _createDoc(issue, savePath, templatePath):
     _addPortraitAndBio(doc, issue)
     _setTOC(doc.Content)
     _finalize(word, doc)
-
-def _getPublishDate():
-    """ Return (year, month, day) of the coming Friday.
-        If today is Friday, return date of today.  """
-    today = date.today()
-    for offset in range(7):
-        pubDay = today + timedelta(days=offset)
-        if pubDay.weekday() == 4:  #Friday
-            break
-    return pubDay.timetuple()[:3]
 
 def _getFullTitle(issue):
     return u'第' + issue.issueNum + u'期' + ' ' + issue.grandTitle
@@ -89,9 +78,22 @@ def _initialize(issue, savePath, templatePath):
 
     return word, doc
 
-def _setCoverPage(rng, issue):
+def _setCoverPage(doc, issue):
+    rng = doc.Content
     rng.Find.Execute(FindText='[COVERIMAGE]', ReplaceWith='')
-    #TODO
+    rng.Collapse( win32.constants.wdCollapseEnd )
+    A4_WIDTH = 595.35
+    A4_HEIGHT = 841.95
+    if issue.coverImagePath:
+        w, h = Image.open(issue.coverImagePath).size
+        doc.Shapes.AddPicture(FileName=issue.coverImagePath,
+                              LinkToFile=False,
+                              SaveWithDocument=True,
+                              Left=0,
+                              Top=-10,
+                              Width=A4_WIDTH,
+                              Height=A4_HEIGHT,
+                              Anchor=rng)
     logging.info('coverpage processed')
 
 def _addEditorRemark(rng, issue):
@@ -100,15 +102,15 @@ def _addEditorRemark(rng, issue):
     logging.info("editor's remark processed")
 
 def _setHeaders(doc, issue):
-    year, month, day = _getPublishDate()
-    pubDayS = str(year) + u'年' + str(month) + u'月' + str(day) + u'日'
+    year, month, day = issue.publishDate
+    pubDateS = str(year) + u'年' + str(month) + u'月' + str(day) + u'日'
     fullTitle = _getFullTitle(issue)
     C = win32.constants.wdHeaderFooterPrimary
-    doc.Sections(1).Headers(C).Range.InsertAfter(pubDayS + ' ' + fullTitle +
+    doc.Sections(1).Headers(C).Range.InsertAfter(pubDateS + ' ' + fullTitle +
                                                  '\r\n' * 2)
     doc.Sections(1).PageSetup.DifferentFirstPageHeaderFooter = True
     # No title for contents page
-    doc.Sections(3).Headers(C).Range.InsertAfter(pubDayS + ' ' + fullTitle +
+    doc.Sections(3).Headers(C).Range.InsertAfter(pubDateS + ' ' + fullTitle +
                                                  '\r\n' * 2)
     logging.info("Header processed")
 
