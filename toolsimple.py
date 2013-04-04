@@ -56,10 +56,8 @@ import os
 import sys
 import wx
 from aep import (Article, Issue,
-                 urlClean, cleanText, createDoc,
-                 xml2issue, issue2xml,
-                 BRA_L, BRA_R,
-                )
+                 urlClean, cleanText, xml2issue, issue2xml)
+from bride import createDoc, BRA_L, BRA_R
 if __language__ == "English":
     from text_en import txt
 
