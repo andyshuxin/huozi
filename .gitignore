@@ -2,6 +2,7 @@ obsolete
 
 *.pyc
 *.pyo
+*.py~
 
 *.html
 *.htm

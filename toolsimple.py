@@ -43,11 +43,11 @@
 #   from The Noun Project
 
 # Template.dot:
-#   Layout designed by Pan Wenyi, Co-China Forum. Text by Co-China Forum.
+#   Layout designed by Pan Wenyi, Co-China Forum.
+#   Images and text by Co-China Forum.
 #   Copyrighted and not distributed under GPL.
 
-__version__ = 'M/S H'
-from aep import __version__ as __aepversion__
+__version__ = 'H'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 __language__ = "English"
@@ -57,10 +57,13 @@ import sys
 import wx
 from aep import (Article, Issue,
                  urlClean, cleanText,
-                 BRA_L, BRA_R)
-from bride import createDoc
+                 BRA_L, BRA_R,)
+
 if __language__ == "English":
     from text_en import txt
+import bride
+
+##### Constants #####
 
 try:
     with open('DEBUG'):
@@ -70,8 +73,6 @@ except IOError:
 
 #####  UI  #####
 
-#ATTR_NORMAL = wx.TextAttr("black", "white")      #Doesn't work on Win
-#ATTR_HIGHLIGHT = wx.TextAttr('black', 'yellow')
 MAGIC_HEIGHT = 90.0   # used in AddArticlesFrame, for portrait display
 
 ##### Window of Adding one Article #####
@@ -488,7 +489,7 @@ class MainFrame(wx.Frame):
         self.btnConfigIssue = self.regToolbarBtn('img/configissue.png',
                                                  'img/configissue-d.png')
 
-        self.btnGetDoc = self.regToolbarBtn('img/getdoc.png',
+        self.btnExport = self.regToolbarBtn('img/getdoc.png',
                                             'img/getdoc-d.png')
 
         self.btnPublish = self.regToolbarBtn('img/publish.png',
@@ -510,13 +511,13 @@ class MainFrame(wx.Frame):
         self.btnSaveIssue.Bind(wx.EVT_BUTTON, self.onSaveIssue)
         self.btnSaveasIssue.Bind(wx.EVT_BUTTON, self.onSaveAsIssue)
         self.btnConfigIssue.Bind(wx.EVT_BUTTON, self.onConfigIssue)
-        self.btnGetDoc.Bind(wx.EVT_BUTTON, self.onCreateDoc)
+        self.btnExport.Bind(wx.EVT_BUTTON, self.onExport)
         self.btnTutorial.Bind(wx.EVT_BUTTON, self.onTutorial)
         self.btnAbout.Bind(wx.EVT_BUTTON, self.onAbout)
         self.btnQuit.Bind(wx.EVT_BUTTON, self.onQuit)
 
         for btn in (self.btnSaveIssue, self.btnSaveasIssue, self.btnPublish,
-                    self.btnGetDoc, self.btnConfigIssue):
+                    self.btnExport, self.btnConfigIssue):
             btn.Disable()
 
         # Not implemented
@@ -677,13 +678,12 @@ class MainFrame(wx.Frame):
             self.btnAddArticle.Enable(True)
             self.btnAddArticles.Enable(True)
             self.btnAddCategory.Enable(True)
-            self.btnGetDoc.Enable()
+            self.btnExport.Enable()
             self.btnConfigIssue.Enable()
 
         self.Layout()
         self.SetSize((800, 600))
-        self.basicTitle = (u'Tool Simple ' + __version__ +
-                          ' (AEP: ' + __aepversion__ + ')')
+        self.basicTitle = u'Tool Simple'
         self.SetTitle(self.basicTitle)
         self.Centre()
         self.Show(True)
@@ -738,7 +738,7 @@ class MainFrame(wx.Frame):
            btn.Enable()
         if os.name == 'nt':
             # TODO: Registry checking for Word
-            self.btnGetDoc.Enable()
+            self.btnExport.Enable()
 
         self.currentSavePath = openPath
 
@@ -802,7 +802,7 @@ class MainFrame(wx.Frame):
         self.btnAddCategory.Enable(True)
         if os.name == 'nt':
             # TODO: Registry checking for Word
-            self.btnGetDoc.Enable()
+            self.btnExport.Enable()
 
         self.updateInfoBar(-1)
         self.SetTitle(self.basicTitle + ': ' +
@@ -835,19 +835,9 @@ class MainFrame(wx.Frame):
             self.articleList.Insert(catInBracket, pos)
         self.updateCatInfo()
 
-    def onCreateDoc(self, e):
-        # Backup clipboard
-        if not wx.TheClipboard.IsOpened():
-            wx.TheClipboard.Open()
-            cp = wx.TextDataObject()
-            hasCP = wx.TheClipboard.GetData(cp)
-            wx.TheClipboard.Close()
-        createDoc(self.issue)
-        # Restore clipboard
-        if hasCP and not wx.TheClipboard.IsOpened():
-            wx.TheClipboard.Open()
-            wx.TheClipboard.SetData(cp)
-            wx.TheClipboard.Close()
+    def onExport(self, e):
+        path = self.issue.saveToDoc()
+        bride.openDoc(path)
 
     def onQuit(self, e):
         dlgYesNo = wx.MessageDialog(None,

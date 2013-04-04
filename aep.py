@@ -2,10 +2,10 @@
 
 # AEP, Automatic E-magazine Preprocessor, a set of modules that simulate
 # human action in the following procedures:
-#   fetching webpages;
-#   extracting main text;
-#   removing unnecessary characters; and
-#   guessing meta information such as title, author, and subtitles.
+#   1. fetching webpages;
+#   2. extracting main text;
+#   3. removing unnecessary characters; and
+#   4. guessing meta information such as title, author, and subtitles.
 
 # Currenly, the modules are customized for production of 1510 Weekly.
 
@@ -48,7 +48,6 @@ SYSENC = sys.getfilesystemencoding()
 
 BRA_L, BRA_R = u'【', u'】'
 
-### TODO: Not used; to be tested ###
 p = sys.platform
 if p.startswith('linux'):
     OS = 'linux'
@@ -56,12 +55,11 @@ elif p.startswith('win'):
     OS = 'win'
 elif p.startswith('darwin'):
     OS = 'mac'
-### End to be tested ###
 
 MAXSUBLEN = 12        # Any line longer is assumed not subheadline
 SUBTHREDSOLD = 0.4    # How relatively short a line must be to be a sub
 
-CLEANERBOOK = (
+CLEANER_BOOK = (
                # Garbages
                (u'■',         ''),
                (u'\ue5f1',    ''),           #Some private-use unicode
@@ -76,7 +74,7 @@ CLEANERBOOK = (
                ('\n ',        '\n'),
                ('\n\n',       '\n'),         #duplicate paragraph breaks
 
-               # Punctuations, replaced unconditionally
+               # Punctuations
                ('......',     u'……'),
                ('...',        u'……'),
                (u'。。。。。。',  u'……'),
@@ -142,11 +140,11 @@ class Article(object):
     def loadURL(self, url, issue, ratio=None, detectDuplicate=False):
         """
         Load self with the contents of what url directs to.
-        Use analyseHTML to extract main text and guess author and subheads.
-        Implicitly calling cleanText to clean title and main text.
+        Use analyseHTML to extract main text and guess author and subheads,
+        implicitly calling cleanText to clean title and main text.
 
-        Input: url, str or unicode
-               issue: the issue the article is in; only to check duplicates.
+        Input: url, str or unicode;
+               issue: the issue the article is in, for duplicate check;
                ratio: the thresold ratio for main text extraction.
         """
 
@@ -159,10 +157,10 @@ class Article(object):
             if url in urlList:
                 raise RuntimeError(url, "Duplicated website!")
 
-        htmlText = grab(url)
+        htmlText = _grab(url)
         if not ratio:
             ratio = 0.5
-        analysis = analyseHTML(htmlText, ratio)
+        analysis = _analyseHTML(htmlText, ratio)
         mainText = cleanText(analysis[0])
         if len(mainText) <= 1:
             raise RuntimeError(url, "Can't extract content!")
@@ -217,9 +215,9 @@ class Issue(object):
 
         for article in self:
             articleElement = etree.SubElement(root, "article")
-            realAttrs = [s for s in dir(article)
-                             if (not s.startswith(r'__') and
-                             isinstance(getattr(article, s), basestring))]
+            realAttrs = [attr for attr in dir(article)
+                             if (not attr.startswith(r'__') and
+                             isinstance(getattr(article, attr), basestring))]
             for attr in realAttrs:
                 item = etree.SubElement(articleElement, attr)
                 item.text = getattr(article, attr)
@@ -254,6 +252,14 @@ class Issue(object):
                             article.subheadLines.append(sub.text)
                 self.addArticle(article)
 
+    def saveToDoc(self, savePath=None, templatePath=None):
+        try:
+            from bride import createDoc
+        except ImportError:
+            raise RuntimeError("Can't find The Bride. Doc creation failed")
+        savePath = createDoc(self, savePath, templatePath)
+        return savePath
+
     def clear(self):
         self.__init__()
 
@@ -266,9 +272,9 @@ class Issue(object):
 
 def _isCJKHan(char):
     """ A very rough approximation. Produces false negatives. """
-    return 0x4E00 <= ord(char) < 0x9FCC
+    return 0x4E00 <= ord(char) <= 0x9FCC
 
-def cleanText(text, patternBook=CLEANERBOOK):
+def cleanText(text, patternBook=CLEANER_BOOK):
     """
     Replace contents according to patterns in patternBook, delete all spaces
     next to Chinese characters, and combine consective spaces.
@@ -398,17 +404,18 @@ def _guessMeta(htmlText, plainText):
 
     return (cleanText(title), cleanText(author), subs)
 
-def analyseHTML(htmlText, ratio=None):
+def _analyseHTML(htmlText, ratio=None):
 
     """
     Input: htmlText, a string, which is a html file;
            ratio, the thresold ratio to be used in main text extraction.
            If ratio is not given, try 0.5, then if there are too
            few contents, try 0.4, then 0.3...
+
     Return: a tuple (maintext, metaInfo) -
-                the first element is the content part of the html,
-                and the second element is a dictionary mapping meta labels
-                with their values.
+                the first element is the content part of the html, and
+                the second element is a dictionary mapping meta labels
+                    with their values.
     """
 
     logging.info('analyseHtml running '+str(datetime.now()))
@@ -439,7 +446,7 @@ def urlClean(url):
         url = 'http://' + url
     return url
 
-def grab(url):
+def _grab(url):
 
     """
     Input: a URL to a webpage. (doc and pdf support to be done)
@@ -515,8 +522,6 @@ def grab(url):
     html = html.decode(charset, 'ignore')
     logging.info('grab about to return')
     return html
-
-
 
 if __name__ == '__main__':
     from test import test

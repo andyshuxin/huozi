@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# The Bride, a Microsoft Word template adapter.
+# The Bride, a Microsoft Word template manipulator.
 
-# Currenly, the module is customized for production of 1510 Weekly.
+# Currently, the module is customized for production of 1510 Weekly.
 
 # Copyright (C) 2013 Shu Xin
 
@@ -29,18 +29,24 @@ logging.info('\r\n' + '='*30)
 logging.info('The Bride running '+str(datetime.now()))
 
 def createDocx(issue):
-    pass
+    pass #TODO
 
-def createDoc(issue):
+def createDoc(issue, savePath=None, templatePath=None):
     """Create a doc based on template.dot and fill in the contents of issue."""
-    _createDoc(issue)
-    # createDoc screws clipboard. Better to clear it afterwards.
+    if savePath is None:
+        savePath = os.getcwd().decode(SYSENC) + '\\' + _getFullTitle(issue)
+    if templatePath is None:
+        templatePath = os.getcwd().decode(SYSENC) + r'\template.dot'
+    _createDoc(issue, savePath, templatePath)
+
     win32clipboard.OpenClipboard()
     win32clipboard.EmptyClipboard()
     win32clipboard.CloseClipboard()
 
-def _createDoc(issue):
-    word, doc = _initialize(issue)
+    return savePath + '.doc'
+
+def _createDoc(issue, savePath, templatePath):
+    word, doc = _initialize(issue, savePath, templatePath)
     _setCoverPage(doc.Content, issue)
     _addEditorRemark(doc.Content, issue)
     _setHeaders(doc, issue)
@@ -48,7 +54,7 @@ def _createDoc(issue):
     _addArticles(doc, issue)
     _addPortraitAndBio(doc, issue)
     _setTOC(doc.Content)
-    _finalize(word)
+    _finalize(word, doc)
 
 def _getPublishDate():
     """ Return (year, month, day) of the coming Friday.
@@ -63,20 +69,21 @@ def _getPublishDate():
 def _getFullTitle(issue):
     return u'第' + issue.issueNum + u'期' + ' ' + issue.grandTitle
 
-def _initialize(issue):
+def _initialize(issue, savePath, templatePath):
     logging.info('Doc creation module running %s' % str(datetime.now()))
     logging.info('Connecting MS Word')
 
     word = win32.gencache.EnsureDispatch('Word.Application')
+    word.Visible = False
 
     logging.info('MS Word API connection succeeded')
 
-    doc = word.Documents.Open(os.getcwd().decode(SYSENC) + r'\template.dot')
+    doc = word.Documents.Open(templatePath)
 
     logging.info('Template open succeeded. Adding contents.')
 
     fullTitle = _getFullTitle(issue)
-    doc.SaveAs(FileName=(os.getcwd().decode(SYSENC) + u'\\' + fullTitle),
+    doc.SaveAs(FileName=savePath.encode(SYSENC),
                FileFormat=win32.constants.wdFormatDocument)
     logging.info('File saved')
 
@@ -233,6 +240,11 @@ def _setTOC(rng):
     except:
         logging.debug('TOC creation failed')
 
-def _finalize(word):
+def _finalize(word, doc):
+    doc.Save()
+    word.Quit()
+
+def openDoc(path):
+    word = win32.gencache.EnsureDispatch('Word.Application')
+    doc = word.Documents.Open(path)
     word.Visible = True
-    logging.info('Word made visible')
