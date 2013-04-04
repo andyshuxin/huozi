@@ -14,8 +14,12 @@ import os
 import logging
 from PIL import Image
 from datetime import date, datetime, timedelta
-import win32com.client as win32
-import win32clipboard
+try:
+    import win32com.client as win32
+    import win32clipboard
+    hasPyWin = True
+except ImportError:
+    hasPyWin = False
 
 from aep import SYSENC, BRA_L, BRA_R
 MAGIC_WIDTH = 120.0 # roughly equals to left page margin
@@ -23,6 +27,9 @@ MAGIC_WIDTH = 120.0 # roughly equals to left page margin
 logging.basicConfig(filename='bride.log', level=logging.DEBUG)
 logging.info('\r\n' + '='*30)
 logging.info('The Bride running '+str(datetime.now()))
+
+def createDocx(issue):
+    pass
 
 def createDoc(issue):
     """Create a doc based on template.dot and fill in the contents of issue."""

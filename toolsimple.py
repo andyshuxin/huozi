@@ -56,8 +56,9 @@ import os
 import sys
 import wx
 from aep import (Article, Issue,
-                 urlClean, cleanText, xml2issue, issue2xml)
-from bride import createDoc, BRA_L, BRA_R
+                 urlClean, cleanText,
+                 BRA_L, BRA_R)
+from bride import createDoc
 if __language__ == "English":
     from text_en import txt
 
@@ -723,7 +724,7 @@ class MainFrame(wx.Frame):
         content = f.read()
         f.close()
 
-        self.issue = xml2issue(content)
+        self.issue.fromXML(content)
         self.updateInfoBar(-1)
         self.clearTextBox()
         self.updateCatInfo()
@@ -749,7 +750,7 @@ class MainFrame(wx.Frame):
             return
 
         f = open(self.currentSavePath, 'w')
-        content = issue2xml(self.issue)
+        content = self.issue.toXML()
         f.write(content)
         f.close()
 
@@ -1208,7 +1209,7 @@ class MainFrame(wx.Frame):
         return None
 
     def printIssue(self, e=None):
-        print issue2xml(self.issue)
+        print self.issue.toXML()
 
 def _isCat(title):
     """Return if title is surrounded by square brackets"""

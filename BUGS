@@ -21,3 +21,7 @@
 
 9. If createDoc quits prematurely, WINWORD.exe is still there, not visible,
    blocking attempts to save under the same filename as it opens.
+
+10. Pops 'lost unsaved progress' warning even when there is none.
+
+11. After I click infobar to config issue, article info are gone.
