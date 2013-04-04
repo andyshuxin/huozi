@@ -90,6 +90,8 @@ CLEANER_BOOK = (
 CJK_PUNCTUATION_REPLACEMENT = (
                (',', u'，'),
                ('.', u'。'),
+               ('(', u'（'),
+               (')', u'）'),
               )
 
 AUTHORMARKERS = (u'作者:', u'文:', u'作者：', u'文：')
