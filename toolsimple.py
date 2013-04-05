@@ -3,7 +3,7 @@
 
 # Copyright (C) 2013 Shu Xin
 
-# Tool Simple, a simplistic DTP GUI
+# Tool Simple, a simplistic DTP GUI, frontend of AEP and The Bride.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -76,53 +76,18 @@ except IOError:
 
 MAGIC_HEIGHT = 90.0   # used in AddArticlesFrame, for portrait display
 
+##### Window of Adding one Article #####
 
-class ChooseImageFrame(wx.Frame):
+class BaseFrame(wx.Frame):
 
-    def __init__(self, *args, **kwargs):
-        super(ChooseImageFrame, self).__init__(None, *args, **kwargs)
+    def __init__(self, parent, title='', size=(800, 600), *args, **kwargs):
+        super(BaseFrame, self).__init__(parent=parent, *args, **kwargs)
         self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
-        self.SetTitle(txt['ConfigIssueT'])
-        self.drawUI()
+        self.SetTitle(title)
         self.Layout()
-        self.SetSize((600, 600))
+        self.SetSize(size)
         self.Centre()
         self.Show(True)
-
-    def drawUI(self):
-        self.panel = wx.Panel(self, wx.ID_ANY)
-        self.box = wx.BoxSizer(wx.VERTICAL)
-        self.imageBox = wx.StaticBitmap(self.panel, wx.ID_ANY,
-                                        size=(500, 500))
-        self.imageBox.SetBitmap(wx.EmptyImage(500, 500).ConvertToBitmap())
-        self.box.Add(self.imageBox, 1, flag=wx.EXPAND)
-        self.btnOK = wx.Button(self.panel, label='&Confirm')
-        self.btnCancel = wx.Button(self.panel, label='C&ancel')
-        self.box.Add(self.btnOK, 0)
-        self.box.Add(self.btnCancel, 0, flag=wx.TOP, border=5)
-        self.btnOK.Bind(wx.EVT_BUTTON, self.onOK)
-        self.btnCancel.Bind(wx.EVT_BUTTON, self.onCancel)
-
-    def getPath(self):
-        path = self.askPortraitPath()
-        if path:
-            img = wx.Image(path, wx.BITMAP_TYPE_ANY)
-            w, h = img.GetSize()
-            if h > MAGIC_HEIGHT:
-                w = w * MAGIC_HEIGHT / h
-                h = MAGIC_HEIGHT
-                img.Rescale(w, h)
-            img = img.ConvertToBitmap()
-            self.imageBox.SetBitmap(img)
-        return path
-
-    def onOK(self, event):
-        pass
-
-    def onCancel(self, event):
-        pass
-
-##### Window of Adding one Article #####
 
 class SetArticleFrame(wx.Frame):
 
@@ -466,7 +431,15 @@ class AddArticlesFrame(wx.Frame):
         self.GetParent().Enable()
         self.Destroy()
 
-class ConfigIssueFrame(wx.Frame):
+class ConfigIssueFrame(BaseFrame):
+
+    def __init__(self, parent, currentIssue):
+        self.targetIssue = currentIssue
+        super(ConfigIssueFrame, self).__init__(parent=parent,
+                                               title=txt['ConfigIssueT'],
+                                               size=(450, 600))
+        self.SetTitle(txt['ConfigIssueT'])
+        self.drawUI()
 
     def askPortraitPath(self, *args):   #TODO: Combine with duplicates
         dlgPortrait = wx.FileDialog(None, message=txt['PortraitT'],
@@ -488,18 +461,6 @@ class ConfigIssueFrame(wx.Frame):
             if pubDay.weekday() == 4:  #Friday
                 break
         return (str(i) for i in pubDay.timetuple()[:3])
-
-    def __init__(self, currentIssue, *args, **kwargs):
-        self.targetIssue = currentIssue
-
-        super(ConfigIssueFrame, self).__init__(parent=None, *args, **kwargs)
-        self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
-        self.SetTitle(txt['ConfigIssueT'])
-        self.drawUI()
-        self.Layout()
-        self.SetSize((450, 600))
-        self.Centre()
-        self.Show(True)
 
     def drawUI(self):
         self.panel = wx.Panel(self, wx.ID_ANY)
@@ -613,9 +574,12 @@ class ConfigIssueFrame(wx.Frame):
         month = self.textMonth.GetValue()
         day = self.textDay.GetValue()
         self.targetIssue.publishDate = (year, month, day)
+        self.GetParent().Enable()
+        self.GetParent().updateInfoBar(-1)
         self.Destroy()
 
     def onCancel(self, event):
+        self.GetParent().Enable()
         self.Destroy()
 
     def onDateChange(self, event):
@@ -1008,7 +972,7 @@ class MainFrame(wx.Frame):
 
 
         self.Disable()
-        ConfigIssueFrame(self.issue)
+        ConfigIssueFrame(self, self.issue)
 
         self.btnAddArticle.Enable(True)
         self.btnAddArticles.Enable(True)
@@ -1021,7 +985,6 @@ class MainFrame(wx.Frame):
         self.SetTitle(self.basicTitle + ': ' +
                       'Issue ' + self.issue.issueNum +
                       self.issue.grandTitle)
-        self.Enable()
 
     def onAddArticle(self, e):
         self.Disable()
