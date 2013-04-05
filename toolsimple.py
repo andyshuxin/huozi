@@ -355,6 +355,7 @@ class SetArticleFrame(wx.Frame):
 class AddArticlesFrame(wx.Frame):
     """Window where user inputs a list of urls for downloading"""
 
+    ## AddArticlesFrame
     def __init__(self, *args, **kwargs):
         super(AddArticlesFrame, self).__init__(*args, **kwargs)
         self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
@@ -385,6 +386,7 @@ class AddArticlesFrame(wx.Frame):
         self.urlText.SetFocus()
         self.Show(True)
 
+    ## AddArticlesFrame
     def onOK(self, e):
         urls = self.urlText.GetValue().splitlines()
         if not urls:
@@ -425,12 +427,14 @@ class AddArticlesFrame(wx.Frame):
         mainFrame.Enable()
         self.Destroy()
 
+    ## AddArticlesFrame
     def onCancel(self, e):
         self.GetParent().Enable()
         self.Destroy()
 
 class ConfigIssueFrame(BaseFrame):
 
+    ## ConfigIssueFrame
     def __init__(self, parent, currentIssue):
         self.targetIssue = currentIssue
         super(ConfigIssueFrame, self).__init__(parent=parent,
@@ -439,6 +443,7 @@ class ConfigIssueFrame(BaseFrame):
         self.drawUI()
         self.Show(True)
 
+    ## ConfigIssueFrame
     def askPortraitPath(self, *args):   #TODO: Combine with duplicates
         dlgPortrait = wx.FileDialog(None, message=txt['PortraitT'],
             wildcard="Images|*.jpg;*.jpeg;*.gif;*.png;*.bmp",
@@ -450,6 +455,7 @@ class ConfigIssueFrame(BaseFrame):
             portraitPath = None
         return portraitPath
 
+    ## ConfigIssueFrame
     def _getPublishDate(self):
         """ Return (year, month, day) of the coming Friday.
             If today is Friday, return date of today.  """
@@ -460,6 +466,7 @@ class ConfigIssueFrame(BaseFrame):
                 break
         return (str(i) for i in pubDay.timetuple()[:3])
 
+    ## ConfigIssueFrame
     def drawUI(self):
         self.panel = wx.Panel(self, wx.ID_ANY)
         self.vBox = wx.BoxSizer(wx.VERTICAL)
@@ -591,6 +598,7 @@ class ConfigIssueFrame(BaseFrame):
         self.panel.SetSizerAndFit(self.vBox)
         self.Layout()
 
+    ## ConfigIssueFrame
     def onOK(self, event):
         self.targetIssue.grandTitle = self.textGrandTitle.GetValue()
         self.targetIssue.issueNum = self.textIssueNum.GetValue()
@@ -603,10 +611,12 @@ class ConfigIssueFrame(BaseFrame):
         self.GetParent().updateInfoBar(-1)
         self.Destroy()
 
+    ## ConfigIssueFrame
     def onCancel(self, event):
         self.GetParent().Enable()
         self.Destroy()
 
+    ## ConfigIssueFrame
     def onDateChange(self, event):
         try:
             year = int(self.textYear.GetValue())
@@ -621,6 +631,7 @@ class ConfigIssueFrame(BaseFrame):
             weekday = weekdays[pubDay.weekday()]
             self.hintWeekday.SetLabel(weekday)
 
+    ## ConfigIssueFrame
     def onChangeCoverImage(self, e):
         path = self.askPortraitPath(self)   #TODO: Combine with duplicates
         if path:
@@ -628,6 +639,7 @@ class ConfigIssueFrame(BaseFrame):
             self.textImgPath.SetLabel(os.path.split(path)[1])
         self.Raise()
 
+    ## ConfigIssueFrame
     def onClearCoverImage(self, e):
         dlgYesNo = wx.MessageDialog(None,
                                     txt['ClearCover'],
@@ -644,12 +656,14 @@ class MainFrame(wx.Frame):
 
     """ Main interactive window """
 
+    ## MainFrame
     def __init__(self, currentIssue, *args, **kwargs):
         super(MainFrame, self).__init__(*args, **kwargs)
         self.issue = currentIssue
         self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
         self.drawUI()
 
+    ## MainFrame
     def drawUI(self):
 
         self.drawPanels()
@@ -675,6 +689,7 @@ class MainFrame(wx.Frame):
 
         self.currentSavePath = ''
 
+    ## MainFrame
     def drawPanels(self):
         self.panel = wx.Panel(self, wx.ID_ANY)
         self.panelInfoBar = wx.Panel(self.panel, wx.ID_ANY,
@@ -682,6 +697,7 @@ class MainFrame(wx.Frame):
         self.panelInfoBar.SetBackgroundColour(wx.Colour(202, 237, 218))
         self.panelInfoBar.Bind(wx.EVT_LEFT_DOWN, self.onModifyItemInfo)
 
+    ## MainFrame
     def drawBoxSizers(self):
         self.vBoxGeneral = wx.BoxSizer(wx.VERTICAL)
         self.toolbarBox = wx.BoxSizer(wx.HORIZONTAL)
@@ -700,6 +716,7 @@ class MainFrame(wx.Frame):
         self.vBoxLeft.Add(self.gridBox, proportion=0, flag=wx.EXPAND)
         self.vBoxRight.Add(self.panelInfoBar, 0, flag=wx.EXPAND)
 
+    ## MainFrame
     def regToolbarBtn(self, bmPath, bmdPath):
         btn = wx.BitmapButton(self.panel, wx.ID_ANY,
                               wx.Bitmap(bmPath))
@@ -708,6 +725,7 @@ class MainFrame(wx.Frame):
         self.toolbarBox.Add(btn)
         return btn
 
+    ## MainFrame
     def regBmBtn(self, bmPath, bmdPath):
         btn = wx.BitmapButton(self.panel, wx.ID_ANY,
                               wx.Bitmap(bmPath))
@@ -715,6 +733,7 @@ class MainFrame(wx.Frame):
         btn.SetBitmapDisabled(icon)
         return btn
 
+    ## MainFrame
     def drawMainToolbar(self):
 
         self.btnNewIssue = self.regToolbarBtn('img/newissue.png',
@@ -775,6 +794,7 @@ class MainFrame(wx.Frame):
                     self.btnAbout):
             btn.Disable()
 
+    ## MainFrame
     def drawInfoBars(self):
         # TODO: better formatting and add direct editability
         self.infobarBox = wx.BoxSizer(wx.VERTICAL)
@@ -811,6 +831,7 @@ class MainFrame(wx.Frame):
 
         self.panelInfoBar.SetSizerAndFit(self.infobarBox)
 
+    ## MainFrame
     def drawArticleListAndButtons(self):
         self.articleList = wx.ListBox(self.panel, wx.ID_ANY,
                                       wx.DefaultPosition, wx.DefaultSize,
@@ -875,6 +896,7 @@ class MainFrame(wx.Frame):
         self.btnAddArticles.Bind(wx.EVT_BUTTON, self.onAddArticles)
         self.btnAddCategory.Bind(wx.EVT_BUTTON, self.onAddCategory)
 
+    ## MainFrame
     def drawTextboxAndButtons(self):
         # Maintext display and editing 
         self.textBox = wx.TextCtrl(self.panel, value='',
@@ -917,6 +939,7 @@ class MainFrame(wx.Frame):
 
 ## ------------- Toolbar methods -------------------- ##
 
+    ## MainFrame
     def onNewIssue(self, e):
         dlgYesNo = wx.MessageDialog(None,
                                     txt['ConfirmNewQ'],
@@ -931,6 +954,7 @@ class MainFrame(wx.Frame):
             self.textBox.SetValue('')
             self.currentSavePath = ''
 
+    ## MainFrame
     def onOpenIssue(self, e):
         dlgYesNo = wx.MessageDialog(None,
                                     txt['ConfirmOpenQ'],
@@ -969,6 +993,7 @@ class MainFrame(wx.Frame):
 
         self.currentSavePath = openPath
 
+    ## MainFrame
     def onSaveIssue(self, e):
         if not self.currentSavePath:
             self.onSaveAsIssue(e)
@@ -981,6 +1006,7 @@ class MainFrame(wx.Frame):
         f.write(content)
         f.close()
 
+    ## MainFrame
     def onSaveAsIssue(self, e):
         defaultDir, defaultFile = os.path.split(self.currentSavePath)
 
@@ -999,12 +1025,12 @@ class MainFrame(wx.Frame):
         f.write(content)
         f.close()
 
+    ## MainFrame
     def onConfigIssue(self, e):
 
         """
         Set the basic information of the current issue.
         """
-
 
         self.Disable()
         ConfigIssueFrame(self, self.issue)
@@ -1021,25 +1047,32 @@ class MainFrame(wx.Frame):
                       'Issue ' + self.issue.issueNum +
                       self.issue.grandTitle)
 
+    ## MainFrame
     def onExport(self, e):
         path = self.issue.saveToDoc()
         bride.openDoc(path)
 
+    ## MainFrame
     def onPublish(self, e):
         pass
 
+    ## MainFrame
     def onSettings(self, e):
         pass
 
+    ## MainFrame
     def onTutorial(self, e):
         self.Tutorial(e)
 
+    ## MainFrame
     def showTutorial(self, e):
         TutorialFrame()
 
+    ## MainFrame
     def onAbout(self, e):
         pass
 
+    ## MainFrame
     def onQuit(self, e):
         dlgYesNo = wx.MessageDialog(None,
                                     txt['ConfirmQuitQ'],
@@ -1050,16 +1083,19 @@ class MainFrame(wx.Frame):
 
 ## ------------- ArticleList tool methods -------------------- ##
 
+    ## MainFrame
     def onAddArticle(self, e):
         self.Disable()
         SetArticleFrame(articleArgv=None, parent=self)
 
+    ## MainFrame
     def onAddArticles(self, e):
         """ Ask for a list of URLs and retrieve and process them, and update
         the article list.  """
         self.Disable()
         AddArticlesFrame(self)
 
+    ## MainFrame
     def onAddCategory(self, e):
         cat = self.askInfo(txt['AddCategoryQ'],
                            txt['AddCategoryT'])
@@ -1075,6 +1111,7 @@ class MainFrame(wx.Frame):
             self.articleList.Insert(catInBracket, pos)
         self.updateCatInfo()
 
+    ## MainFrame
     def onUp(self, e):
         index = self.articleList.GetSelection()
 
@@ -1111,6 +1148,7 @@ class MainFrame(wx.Frame):
         if index - 1 == self.articleList.GetCount() - 1:
             self.btnDn.Enable(False)
 
+    ## MainFrame
     def onDown(self, e):
         index = self.articleList.GetSelection()
 
@@ -1144,6 +1182,7 @@ class MainFrame(wx.Frame):
         if index+1 == self.articleList.GetCount() - 1:
             self.btnDn.Enable(False)
 
+    ## MainFrame
     def onModifyItemInfo(self, e):
         index = self.articleList.GetSelection()
         if index == -1:
@@ -1165,6 +1204,7 @@ class MainFrame(wx.Frame):
                             parent=self)
             self.articleList.SetString(index, article.title)
 
+    ## MainFrame
     def onDelete(self, e):
         index = self.articleList.GetSelection()
         if index == -1:
@@ -1192,6 +1232,7 @@ class MainFrame(wx.Frame):
 
 ## ------------- Article tool methods -------------------- ##
 
+    ## MainFrame
     def onEditText(self, e):
 
         for tool in (self.articleList, self.btnAddArticle, self.btnAddArticles,
@@ -1211,6 +1252,7 @@ class MainFrame(wx.Frame):
         self.btnEdit.Enable(False)
         self.btnSave.Enable(True)
 
+    ## MainFrame
     def onSaveEdit(self, e):
         for tool in (self.articleList, self.btnAddArticle, self.btnAddArticles,
                      self.btnAddCategory, self.btnDel, self.btnUp, self.btnDn,
@@ -1235,6 +1277,7 @@ class MainFrame(wx.Frame):
         self.btnEdit.Enable(True)
         self.btnSave.Enable(False)
 
+    ## MainFrame
     def onArticleListClick(self, e):
 
         if e.GetSelection() == -1:
@@ -1253,9 +1296,11 @@ class MainFrame(wx.Frame):
         self.updateInfoBar(e.GetSelection())
         self.updateTextBox()
 
+    ## MainFrame
     def onArticleListDclick(self, e):
         self.onModifyItemInfo(e)
 
+    ## MainFrame
     def onToggleSubhead(self, e):
 
         """
@@ -1294,9 +1339,11 @@ class MainFrame(wx.Frame):
                                   wx.TextAttr('black', 'yellow'))
             article.subheadLines.append(line)
 
+    ## MainFrame
     def onToggleComment(self, e):
         pass
 
+    ## MainFrame
     def updateInfoBar(self, index):
 
         # Issue info
@@ -1326,6 +1373,7 @@ class MainFrame(wx.Frame):
         else:
             self.infoBar4.SetLabel("Author's bio: " + authorBio[:33] + u' ……')
 
+    ## MainFrame
     def updateTextBox(self):
 
         if self.articleList.GetSelection() == -1:
@@ -1365,9 +1413,11 @@ class MainFrame(wx.Frame):
             self.textBox.SetStyle(leftMargin, rightMargin,
                                   wx.TextAttr('black', 'yellow'))
 
+    ## MainFrame
     def clearTextBox(self, *args):
         self.textBox.SetValue('')
 
+    ## MainFrame
     def updateCatInfo(self):
         cat = ''
         for i in range(0, self.articleList.GetCount()):
@@ -1380,6 +1430,7 @@ class MainFrame(wx.Frame):
                         article.category = cat
                         break
 
+    ## MainFrame
     def refreshArticleListBox(self):
         self.articleList.Clear()
         cat = ''
@@ -1389,6 +1440,7 @@ class MainFrame(wx.Frame):
                 cat = article.category
             self.articleList.Append(article.title)
 
+    ## MainFrame
     def askInfo(self, prompt, dialogTitle, defaultVal='',
                 multiline=False, noCancel=False):
         """ Open a dialog and ask the user for information.
@@ -1411,6 +1463,7 @@ class MainFrame(wx.Frame):
         infoDialog.Destroy()
         return res
 
+    ## MainFrame
     def getSelectedArticle(self):
         """ Return the article in self.issue that matches the selected string
             in listbox."""
@@ -1420,6 +1473,7 @@ class MainFrame(wx.Frame):
                 return article
         return None
 
+    ## MainFrame
     def printIssue(self, e=None):
         print 'coverImagePath:', self.issue.coverImagePath
         #print self.issue.toXML()
