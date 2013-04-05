@@ -268,7 +268,7 @@ class Issue(object):
         try:
             from bride import createDoc
         except ImportError:
-            raise RuntimeError("Can't find The Bride. Doc creation failed")
+            raise RuntimeError("The Bride not found. Doc creation failed")
         savePath = createDoc(self, savePath, templatePath)
         return savePath
 

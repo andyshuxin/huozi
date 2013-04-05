@@ -81,18 +81,16 @@ MAGIC_HEIGHT = 90.0   # used in AddArticlesFrame, for portrait display
 class BaseFrame(wx.Frame):
 
     def __init__(self, parent, title='', size=(800, 600), *args, **kwargs):
-        super(BaseFrame, self).__init__(parent=parent, *args, **kwargs)
+        wx.Frame.__init__(self, parent=parent, *args, **kwargs)
         self.SetIcon(wx.Icon('img/icon.ico', wx.BITMAP_TYPE_ICO))
         self.SetTitle(title)
-        self.Layout()
         self.SetSize(size)
         self.Centre()
-        self.Show(True)
 
 class SetArticleFrame(wx.Frame):
 
-    """ Either add a new article with greater control over details,
-        or edit an existing article """
+    """ Add a new article with greater control over details than batch
+        downloading. Also used for editing an existing article """
 
     def __init__(self, articleArgv=None, *args, **kwargs):
         super(SetArticleFrame, self).__init__(*args, **kwargs)
@@ -440,6 +438,7 @@ class ConfigIssueFrame(BaseFrame):
                                                size=(450, 600))
         self.SetTitle(txt['ConfigIssueT'])
         self.drawUI()
+        self.Show(True)
 
     def askPortraitPath(self, *args):   #TODO: Combine with duplicates
         dlgPortrait = wx.FileDialog(None, message=txt['PortraitT'],
@@ -539,18 +538,34 @@ class ConfigIssueFrame(BaseFrame):
                       flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM,
                       border=10)
         # Cover Image
-        self.hBoxCoverImage = wx.BoxSizer(wx.HORIZONTAL)
+        self.hintPath = wx.StaticText(self.panel, wx.ID_ANY,
+                                      txt['hintCoverImgPath'],
+                                      wx.DefaultPosition, wx.DefaultSize,
+                                      style=wx.ALIGN_LEFT)
+        imgFilename = os.path.split(self.targetIssue.coverImagePath)[1]
+        self.textImgPath = wx.StaticText(self.panel, wx.ID_ANY,
+                                         imgFilename,
+                                         wx.DefaultPosition, wx.DefaultSize,
+                                         style=wx.ALIGN_LEFT)
         self.btnSetCoverImage = wx.Button(self.panel, label='&Set Cover')
-        self.btnSetCoverImage.Bind(wx.EVT_BUTTON, self.onChangeCoverImage)
         self.btnClearCoverImage = wx.Button(self.panel, label='&Clear Cover')
-        self.btnClearCoverImage.Bind(wx.EVT_BUTTON, self.onClearCoverImage)
-        self.hBoxCoverImage.Add(self.btnSetCoverImage, 0,
+        self.hBoxCoverImage = wx.BoxSizer(wx.HORIZONTAL)
+        self.hBoxCoverImage.Add(self.hintPath, 0,
                       flag=wx.EXPAND|wx.LEFT|wx.BOTTOM,
+                      border=10)
+        self.hBoxCoverImage.Add(self.textImgPath, 1,
+                      flag=wx.EXPAND|wx.LEFT|wx.BOTTOM,
+                      border=10)
+        self.hBoxCoverImage.Add(self.btnSetCoverImage, 0,
+                      flag=wx.EXPAND|wx.BOTTOM,
                       border=10)
         self.hBoxCoverImage.Add(self.btnClearCoverImage, 0,
                       flag=wx.EXPAND|wx.RIGHT|wx.BOTTOM,
                       border=10)
         self.vBox.Add(self.hBoxCoverImage, 0, flag=wx.EXPAND)
+
+        self.btnSetCoverImage.Bind(wx.EVT_BUTTON, self.onChangeCoverImage)
+        self.btnClearCoverImage.Bind(wx.EVT_BUTTON, self.onClearCoverImage)
 
         # OK and Cancel buttons
         self.hBoxBtns = wx.BoxSizer(wx.HORIZONTAL)
@@ -565,6 +580,7 @@ class ConfigIssueFrame(BaseFrame):
                       border=10)
 
         self.panel.SetSizerAndFit(self.vBox)
+        self.Layout()
 
     def onOK(self, event):
         self.targetIssue.grandTitle = self.textGrandTitle.GetValue()
@@ -600,6 +616,7 @@ class ConfigIssueFrame(BaseFrame):
         path = self.askPortraitPath(self)   #TODO: Combine with duplicates
         if path:
             self.targetIssue.coverImagePath = path
+            self.textImgPath.SetLabel(os.path.split(path)[1])
         self.Raise()
 
     def onClearCoverImage(self, e):
@@ -608,6 +625,7 @@ class ConfigIssueFrame(BaseFrame):
                                     style=wx.YES|wx.NO)
         if dlgYesNo.ShowModal() == wx.ID_YES:
             self.targetIssue.coverImagePath = ''
+            self.textImgPath.SetLabel('')
 
 class TutorialFrame(wx.Frame):
     pass
@@ -735,6 +753,7 @@ class MainFrame(wx.Frame):
         self.btnExport.Bind(wx.EVT_BUTTON, self.onExport)
         self.btnSettings.Bind(wx.EVT_BUTTON, self.onSettings)
         self.btnTutorial.Bind(wx.EVT_BUTTON, self.onTutorial)
+        self.btnPublish.Bind(wx.EVT_BUTTON, self.onPublish)
         self.btnAbout.Bind(wx.EVT_BUTTON, self.onAbout)
         self.btnQuit.Bind(wx.EVT_BUTTON, self.onQuit)
 
@@ -887,6 +906,8 @@ class MainFrame(wx.Frame):
             self.hBoxBottom.Add(btnDev, 0)
             self.Bind(wx.EVT_BUTTON, self.printIssue, btnDev)
 
+## ------------- Toolbar methods -------------------- ##
+
     def onNewIssue(self, e):
         dlgYesNo = wx.MessageDialog(None,
                                     txt['ConfirmNewQ'],
@@ -965,7 +986,7 @@ class MainFrame(wx.Frame):
         else:
             return
         f = open(savePath, 'w')
-        content = issue2xml(self.issue)
+        content = self.issue.toXML()
         f.write(content)
         f.close()
 
@@ -991,6 +1012,35 @@ class MainFrame(wx.Frame):
                       'Issue ' + self.issue.issueNum +
                       self.issue.grandTitle)
 
+    def onExport(self, e):
+        path = self.issue.saveToDoc()
+        bride.openDoc(path)
+
+    def onPublish(self, e):
+        pass
+
+    def onSettings(self, e):
+        pass
+
+    def onTutorial(self, e):
+        self.Tutorial(e)
+
+    def showTutorial(self, e):
+        TutorialFrame()
+
+    def onAbout(self, e):
+        pass
+
+    def onQuit(self, e):
+        dlgYesNo = wx.MessageDialog(None,
+                                    txt['ConfirmQuitQ'],
+                                    style=wx.YES|wx.NO)
+        if dlgYesNo.ShowModal() == wx.ID_YES:
+            self.Close()
+
+
+## ------------- ArticleList tool methods -------------------- ##
+
     def onAddArticle(self, e):
         self.Disable()
         SetArticleFrame(articleArgv=None, parent=self)
@@ -1015,10 +1065,6 @@ class MainFrame(wx.Frame):
         else:
             self.articleList.Insert(catInBracket, pos)
         self.updateCatInfo()
-
-    def onExport(self, e):
-        path = self.issue.saveToDoc()
-        bride.openDoc(path)
 
     def onUp(self, e):
         index = self.articleList.GetSelection()
@@ -1135,6 +1181,8 @@ class MainFrame(wx.Frame):
         self.clearTextBox()
         self.updateCatInfo()
 
+## ------------- Article tool methods -------------------- ##
+
     def onEditText(self, e):
 
         for tool in (self.articleList, self.btnAddArticle, self.btnAddArticles,
@@ -1239,25 +1287,6 @@ class MainFrame(wx.Frame):
 
     def onToggleComment(self, e):
         pass
-
-    def onSettings(self, e):
-        pass
-
-    def onAbout(self, e):
-        pass
-
-    def onQuit(self, e):
-        dlgYesNo = wx.MessageDialog(None,
-                                    txt['ConfirmQuitQ'],
-                                    style=wx.YES|wx.NO)
-        if dlgYesNo.ShowModal() == wx.ID_YES:
-            self.Close()
-
-    def onTutorial(self, e):
-        self.Tutorial(e)
-
-    def showTutorial(self, e):
-        TutorialFrame()
 
     def updateInfoBar(self, index):
 

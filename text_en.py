@@ -67,6 +67,7 @@ txt = {
        'hintEdiRemark':    "Editor's Remarks:",
        'hintPublishDate':  "Date of Publishing",
        'ClearCover':       "Clear cover image?",
+       'hintCoverImgPath': "Path to cover image:",
        }
 
 weekdays = {
