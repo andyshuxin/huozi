@@ -65,7 +65,7 @@ txt = {
        'hintIssueNum':     "Issue Number:",
        'btnGuessIssueNum': "&Guess!",
        'hintEdiRemark':    "Editor's Remarks:",
-       'hintPublishDate':  "Date of Publishing",
+       'hintPublishDate':  "Date of Publishing:",
        'ClearCover':       "Clear cover image?",
        'hintCoverImgPath': "Path to cover image:",
        }

@@ -436,7 +436,6 @@ class ConfigIssueFrame(BaseFrame):
         super(ConfigIssueFrame, self).__init__(parent=parent,
                                                title=txt['ConfigIssueT'],
                                                size=(450, 600))
-        self.SetTitle(txt['ConfigIssueT'])
         self.drawUI()
         self.Show(True)
 
@@ -471,7 +470,8 @@ class ConfigIssueFrame(BaseFrame):
                               style=wx.ALIGN_LEFT)
         self.textGrandTitle = wx.TextCtrl(self.panel,
                                           value=self.targetIssue.grandTitle)
-        self.vBox.Add(self.hintGrandTitle, 0, flag=wx.EXPAND|wx.ALL, border=10)
+        self.vBox.Add(self.hintGrandTitle, 0,
+                      flag=wx.EXPAND|wx.LEFT|wx.TOP|wx.RIGHT, border=10)
         self.vBox.Add(self.textGrandTitle, 0,
                       flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM,
                       border=10)
@@ -485,11 +485,14 @@ class ConfigIssueFrame(BaseFrame):
         year, month, day = self.targetIssue.publishDate
         if year == '' and month == '' and day == '':
             year, month, day = self._getPublishDate()
-        self.textYear = wx.TextCtrl(self.panel, value=year)
-        self.textMonth = wx.TextCtrl(self.panel, value=month)
-        self.textDay = wx.TextCtrl(self.panel, value=day)
+        self.textYear = wx.TextCtrl(self.panel, value=year,
+                                    size=(50,20))
+        self.textMonth = wx.TextCtrl(self.panel, value=month,
+                                     size=(50,20))
+        self.textDay = wx.TextCtrl(self.panel, value=day,
+                                   size=(50,20))
         self.hintYear = wx.StaticText(self.panel, wx.ID_ANY,
-                                      txt['hintYear'],)
+                                      ' '*5 + txt['hintYear'],)
         self.hintMonth = wx.StaticText(self.panel, wx.ID_ANY,
                                        txt['hintMonth'],)
         self.hintDay = wx.StaticText(self.panel, wx.ID_ANY,
@@ -501,8 +504,9 @@ class ConfigIssueFrame(BaseFrame):
         for ctrl in (self.hintYear, self.textYear,
                      self.hintMonth, self.textMonth,
                      self.hintDay, self.textDay,):
-            self.hBoxDate.Add(ctrl, 0)
-        self.hBoxDate.Add(self.hintWeekday, flag=wx.LEFT, border=5)
+            self.hBoxDate.Add(ctrl, 0, flag=wx.LEFT, border=5)
+        self.hBoxDate.Add(self.hintWeekday, 1,
+                          flag=wx.EXPAND|wx.LEFT, border=5)
 
         for text in (self.textYear, self.textMonth, self.textDay):
             text.Bind(wx.EVT_TEXT, self.onDateChange)
@@ -515,14 +519,18 @@ class ConfigIssueFrame(BaseFrame):
         self.hintIssueNum = wx.StaticText(self.panel, wx.ID_ANY,
                                           txt['hintIssueNum'],)
         self.textIssueNum = wx.TextCtrl(self.panel,
-                                        value=self.targetIssue.issueNum)
+                                        value=self.targetIssue.issueNum,
+                                        size=(80, 25))
         self.btnGuessIssueNum = wx.Button(self.panel, -1,
-                                          txt['btnGuessIssueNum'])
+                                          txt['btnGuessIssueNum'],
+                                          size=(80, 25))
         self.hBoxIssueNum.Add(self.hintIssueNum)
-        self.hBoxIssueNum.Add(self.textIssueNum)
-        self.hBoxIssueNum.Add(self.btnGuessIssueNum)
+        self.hBoxIssueNum.Add(self.textIssueNum, 0,
+                              flag=wx.LEFT, border=5)
+        self.hBoxIssueNum.Add(self.btnGuessIssueNum, 0,
+                              flag=wx.LEFT, border=5)
         self.vBox.Add(self.hBoxIssueNum, 0,
-                      flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM,
+                      flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT|wx.BOTTOM,
                       border=10)
 
         # Editor's remark block
@@ -572,7 +580,8 @@ class ConfigIssueFrame(BaseFrame):
         self.btnOK = wx.Button(self.panel, label='&OK!')
         self.btnCancel = wx.Button(self.panel, label='&Cancel')
         self.hBoxBtns.Add(self.btnOK, 0)
-        self.hBoxBtns.Add(self.btnCancel, 0)
+        self.hBoxBtns.Add(self.btnCancel, 0,
+                          flag=wx.LEFT, border=5)
         self.btnOK.Bind(wx.EVT_BUTTON, self.onOK)
         self.btnCancel.Bind(wx.EVT_BUTTON, self.onCancel)
         self.vBox.Add(self.hBoxBtns, 0,
