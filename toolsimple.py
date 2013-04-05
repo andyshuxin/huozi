@@ -897,8 +897,8 @@ class MainFrame(wx.Frame):
         self.btnComment = self.regBmBtn('img/comment.png',
                                         'img/comment-d.png')
 
-        self.btnSave = self.regBmBtn('img/save.png',
-                                     'img/save-d.png')
+        self.btnSave = self.regBmBtn('img/saveedit.png',
+                                     'img/saveedit-d.png')
 
         for btn in (self.btnEdit, self.btnSubhead,
                     self.btnComment, self.btnSave):
