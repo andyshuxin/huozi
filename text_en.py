@@ -63,7 +63,7 @@ txt = {
        'hintMonth':        "Month",
        'hintDay':          "Day",
        'hintIssueNum':     "Issue Number:",
-       'btnGuessIssueNum': "Guess!",
+       'btnGuessIssueNum': "&Guess!",
        'hintEdiRemark':    "Editor's Remarks:",
        'hintPublishDate':  "Date of Publishing",
        'ClearCover':       "Clear cover image?",

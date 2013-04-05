@@ -715,6 +715,9 @@ class MainFrame(wx.Frame):
 
         self.toolbarBox.AddSpacer(10)
 
+        self.btnSettings = self.regToolbarBtn('img/settings.png',
+                                              'img/settings-d.png')
+
         self.btnTutorial = self.regToolbarBtn('img/tutorial.png',
                                               'img/tutorial-d.png')
 
@@ -730,6 +733,7 @@ class MainFrame(wx.Frame):
         self.btnSaveasIssue.Bind(wx.EVT_BUTTON, self.onSaveAsIssue)
         self.btnConfigIssue.Bind(wx.EVT_BUTTON, self.onConfigIssue)
         self.btnExport.Bind(wx.EVT_BUTTON, self.onExport)
+        self.btnSettings.Bind(wx.EVT_BUTTON, self.onSettings)
         self.btnTutorial.Bind(wx.EVT_BUTTON, self.onTutorial)
         self.btnAbout.Bind(wx.EVT_BUTTON, self.onAbout)
         self.btnQuit.Bind(wx.EVT_BUTTON, self.onQuit)
@@ -739,7 +743,8 @@ class MainFrame(wx.Frame):
             btn.Disable()
 
         # Not implemented
-        for btn in (self.btnTutorial, self.btnAbout):
+        for btn in (self.btnSettings, self.btnTutorial,
+                    self.btnAbout):
             btn.Disable()
 
     def drawInfoBars(self):
@@ -1015,13 +1020,6 @@ class MainFrame(wx.Frame):
         path = self.issue.saveToDoc()
         bride.openDoc(path)
 
-    def onQuit(self, e):
-        dlgYesNo = wx.MessageDialog(None,
-                                    txt['ConfirmQuitQ'],
-                                    style=wx.YES|wx.NO)
-        if dlgYesNo.ShowModal() == wx.ID_YES:
-            self.Close()
-
     def onUp(self, e):
         index = self.articleList.GetSelection()
 
@@ -1242,8 +1240,18 @@ class MainFrame(wx.Frame):
     def onToggleComment(self, e):
         pass
 
+    def onSettings(self, e):
+        pass
+
     def onAbout(self, e):
         pass
+
+    def onQuit(self, e):
+        dlgYesNo = wx.MessageDialog(None,
+                                    txt['ConfirmQuitQ'],
+                                    style=wx.YES|wx.NO)
+        if dlgYesNo.ShowModal() == wx.ID_YES:
+            self.Close()
 
     def onTutorial(self, e):
         self.Tutorial(e)

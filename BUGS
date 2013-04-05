@@ -30,3 +30,5 @@
 
 13. subtitle setting needs further work. use subtitle, which is set independet from Normal,
     heading level 0, instead of heading 3
+
+14. If ConfigIssueFrame() is closed by the close button, MainFrame remains disabled.

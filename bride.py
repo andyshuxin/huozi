@@ -80,6 +80,7 @@ def _initialize(issue, savePath, templatePath):
         doc.SaveAs(FileName=savePath.encode(SYSENC),
                    FileFormat=win32.constants.wdFormatDocument)
     except:
+        logging.debug('File saving failed. path = %s' % savePath)
         raise RuntimeError("Fail to save file.")
     logging.info('File saved')
 
