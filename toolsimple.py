@@ -388,18 +388,38 @@ class AddArticlesFrame(wx.Frame):
 
     ## AddArticlesFrame
     def onOK(self, e):
-        urls = self.urlText.GetValue().splitlines()
-        if not urls:
+
+        def _isURL(s):
+            """Return true if s is a legitimate URL"""
+            #TODO
+            if s.startswith('http') or '.com' in s:
+                return True
+            return False
+
+        inputText = self.urlText.GetValue().splitlines()
+        if not inputText:
             return
         articleList = []
         mainFrame = self.GetParent()
 
-        for url in urls:
+        for s in inputText:
+            if not _isURL(s):
+                colon = u'：' if (u'：' in s) else ':'
+                if colon not in s:
+                    author, title = None, None
+                    continue
+                author, title = s.split(colon, 1)
+                continue
+
             try:
                 article = Article()
-                article.loadURL(url, mainFrame.issue,
+                article.loadURL(s, mainFrame.issue,
                                 detectDuplicate=True)
                 articleList.append(article)
+                if author:
+                    article.author = author
+                if title:
+                    article.title = title
             except RuntimeError as err:
                 try:
                     errorMsg = (txt['graberror']+ err[0] + ': ' + err[1])
@@ -410,6 +430,7 @@ class AddArticlesFrame(wx.Frame):
                     dlg.Destroy()
                 except IndexError: # exception is not tuple: not raised by me
                     raise err
+            author, title = None, None
 
         for article in articleList:
             mainFrame.issue.addArticle(article)
@@ -1103,7 +1124,10 @@ class MainFrame(wx.Frame):
             return
 
         # Update articleList box
-        catInBracket = BRA_L + cat + BRA_R
+        if not _isCat(cat):
+            catInBracket = BRA_L + cat + BRA_R
+        else:
+            catInBracket = cat
         pos = self.articleList.GetSelection()
         if pos == -1:
             self.articleList.Insert(catInBracket, 0)
@@ -1475,8 +1499,8 @@ class MainFrame(wx.Frame):
 
     ## MainFrame
     def printIssue(self, e=None):
-        print 'coverImagePath:', self.issue.coverImagePath
-        #print self.issue.toXML()
+        #print 'coverImagePath:', self.issue.coverImagePath
+        print self.issue.toXML()
 
 def _isCat(title):
     """Return if title is surrounded by square brackets"""
