@@ -11,7 +11,7 @@
 
 # Copyright (C) 2013 Shu Xin
 
-__version__ = '0.90'
+__version__ = '0.91'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
@@ -94,7 +94,7 @@ CJK_PUNCTUATION_REPLACEMENT = (
                (')', u'）'),
               )
 
-AUTHORMARKERS = (u'作者:', u'文:', u'作者：', u'文：')
+AUTHOR_MARKERS = (u'作者:', u'文:', u'作者：', u'文：')
 
 PUNCTUATIONS = (',', '.', ':', ')', u'，', u'。', u'：', u'）')
 
@@ -150,6 +150,15 @@ class Article(object):
                ratio: the thresold ratio for main text extraction.
         """
 
+        def _guessFileType(url):
+            extDict = {
+                    'pdf': 'pdf',
+                    'doc': 'doc',
+                    'docx': 'docx',
+                    }
+            ext = url.split('.')[-1]
+            return extDict.get(ext, 'html')
+
         if len(url) <= 2:
             return None
 
@@ -159,21 +168,45 @@ class Article(object):
             if url in urlList:
                 raise RuntimeError(url, "Duplicated website!")
 
-        htmlText = _grab(url)
-        if not ratio:
-            ratio = 0.5
-        analysis = _analyseHTML(htmlText, ratio)
-        mainText = cleanText(analysis[0])
-        if len(mainText) <= 1:
-            raise RuntimeError(url, "Can't extract content!")
+        fileType = _guessFileType(url)
 
-        meta = analysis[1]
-        self.title = meta['title']
-        self.author = meta['author']
-        self.text = mainText
-        self.subheadLines = meta['sub']
-        self.url = url
-        self.ratio = unicode(ratio)
+        if fileType == 'html':
+            htmlText = _grabHTML(url)
+            if not ratio:
+                ratio = 0.5
+            analysis = _analyseHTML(htmlText, ratio)
+            mainText = cleanText(analysis[0])
+            if len(mainText) <= 1:
+                raise RuntimeError(url, "Can't extract content!")
+
+            meta = analysis[1]
+            self.title = meta['title']
+            self.author = meta['author']
+            self.text = mainText
+            self.subheadLines = meta['sub']
+            self.url = url
+            self.ratio = unicode(ratio)
+
+        elif fileType == 'pdf':
+            #TODO: CJK support
+            from StringIO import StringIO
+            from pyPdf import PdfFileReader
+            o = _makeOpener(url)
+            f = StringIO()
+            f.write(o.read())
+            #import urllib
+            #urllib.urlretrieve(url, 'test.pdf')
+            #f = open('test.pdf', 'rb')
+            pdfFile = PdfFileReader(f)
+            title = pdfFile.getDocumentInfo().title
+            if title:
+                self.title = title
+            else:
+                self.title = '*****'
+            text = u''
+            for page in pdfFile.pages:
+                text += page.extractText()
+            self.text = text
 
     def copy(self):
         return deepcopy(self)
@@ -278,7 +311,7 @@ class Issue(object):
     def __iter__(self):
         for article in self.articleList:
             yield article
-        # So that (for article in issue:) works.
+        # So that (for article in issue: ...) works.
 
 #####  Clearner module  #####
 
@@ -396,8 +429,8 @@ def _guessMeta(htmlText, plainText):
             author = ''
 
     # Guess author from <Author: Mr. Foobar> in text
-    elif _markerPos(htmlText, AUTHORMARKERS) is not None:
-        marker, pos = _markerPos(htmlText, AUTHORMARKERS)
+    elif _markerPos(htmlText, AUTHOR_MARKERS) is not None:
+        marker, pos = _markerPos(htmlText, AUTHOR_MARKERS)
         pos += len(marker)
         L = 0
         TERMINATORS = ('\n', '\r', '<', '>',)
@@ -458,17 +491,7 @@ def urlClean(url):
         url = 'http://' + url
     return url
 
-def _grab(url):
-
-    """
-    Input: a URL to a webpage. (doc and pdf support to be done)
-    Output: the webpage.
-    Will extract charset declaration, if specified, and decode. If not,
-    try to call chardet to detect. If that fails (either chardet is absent or
-    chardet can't determine), assume UTF-8.
-    """
-
-    logging.info('grab running '+str(datetime.now()))
+def _makeOpener(url):
 
     class SmartRedirectHandler(urllib2.HTTPRedirectHandler):
 
@@ -492,6 +515,24 @@ def _grab(url):
             result.status = code
             return result
 
+    url = url.encode(SYSENC)
+    userAgent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; Huozi)'
+    req = urllib2.Request(url, headers={'User-Agent': userAgent})
+    opener = urllib2.build_opener(SmartRedirectHandler(),
+                                  DefaultErrorHandler())
+    f = opener.open(req)
+    return f
+
+def _grabHTML(url):
+
+    """
+    Input: a URL to a webpage. (doc and pdf support to be done)
+    Output: the webpage.
+    Will extract charset declaration, if specified, and decode. If not,
+    try to call chardet to detect. If that fails (either chardet is absent or
+    chardet can't determine), assume UTF-8.
+    """
+
     def _isLegit(char):
         """ Return true if char can be part of a charset statement """
         if (char in ASCII_LETTERS or
@@ -500,13 +541,10 @@ def _grab(url):
            return True
         return False
 
-    url = url.encode(SYSENC)
-    userAgent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; Huozi)'
-    req = urllib2.Request(url, headers={'User-Agent': userAgent})
-    opener = urllib2.build_opener(SmartRedirectHandler(),
-                                  DefaultErrorHandler())
+    logging.info('grab running '+str(datetime.now()))
+
     try:
-        html = opener.open(req).read()
+        html = _makeOpener(url).read()
     except urllib2.HTTPError:
         raise RuntimeError(url, "Connection fails!")
     except urllib2.URLError:
@@ -534,7 +572,3 @@ def _grab(url):
     html = html.decode(charset, 'ignore')
     logging.info('grab about to return')
     return html
-
-if __name__ == '__main__':
-    from test import test
-    test()

@@ -42,12 +42,12 @@
 #   Designed by Jose Manuel Rodriguez(http://thenounproject.com/fivecity_5c),
 #   from The Noun Project
 
-# Template.dot:
+## Template.dot:
 #   Layout designed by Pan Wenyi, Co-China Forum.
 #   Images and text by Co-China Forum.
 #   Copyrighted and not distributed under GPL.
 
-__version__ = 'H'
+__version__ = '0.06'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 __language__ = "English"
@@ -410,6 +410,8 @@ class AddArticlesFrame(wx.Frame):
                     continue
                 author, title = s.split(colon, 1)
                 continue
+            else:
+                author, title = None, None
 
             try:
                 article = Article()
