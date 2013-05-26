@@ -11,7 +11,7 @@
 
 # Copyright (C) 2013 Shu Xin
 
-__version__ = '0.91'
+__version__ = '0.94'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
@@ -153,10 +153,12 @@ class Article(object):
         def _guessFileType(url):
             extDict = {
                     'pdf': 'pdf',
-                    'doc': 'doc',
                     'docx': 'docx',
+                    'doc': 'doc',
                     }
             ext = url.split('.')[-1]
+            if ext[-1] == '/':
+                ext = ext[:-1]
             return extDict.get(ext, 'html')
 
         if len(url) <= 2:
@@ -164,8 +166,7 @@ class Article(object):
 
         url = urlClean(url)
         if detectDuplicate:
-            urlList = [article.url for article in issue]
-            if url in urlList:
+            if issue.has_url(url):
                 raise RuntimeError(url, "Duplicated website!")
 
         fileType = _guessFileType(url)
@@ -188,25 +189,13 @@ class Article(object):
             self.ratio = unicode(ratio)
 
         elif fileType == 'pdf':
-            #TODO: CJK support
-            from StringIO import StringIO
-            from pyPdf import PdfFileReader
-            o = _makeOpener(url)
-            f = StringIO()
-            f.write(o.read())
-            #import urllib
-            #urllib.urlretrieve(url, 'test.pdf')
-            #f = open('test.pdf', 'rb')
-            pdfFile = PdfFileReader(f)
-            title = pdfFile.getDocumentInfo().title
-            if title:
-                self.title = title
-            else:
-                self.title = '*****'
-            text = u''
-            for page in pdfFile.pages:
-                text += page.extractText()
-            self.text = text
+            analysis = _analysePDF(url)
+            self.title = analysis[0]
+            self.author = analysis[1]
+            self.text = analysis[2]
+            self.subheadLines = analysis[3]
+            self.url = url
+
 
     def copy(self):
         return deepcopy(self)
@@ -308,6 +297,12 @@ class Issue(object):
     def clear(self):
         self.__init__()
 
+    def has_url(self, url):
+        for article in self.articleList:
+            if url == article.url:
+                return True
+        return False
+
     def __iter__(self):
         for article in self.articleList:
             yield article
@@ -316,7 +311,7 @@ class Issue(object):
 #####  Clearner module  #####
 
 def _isCJKHan(char):
-    """ A very rough approximation. Produces false negatives. """
+    """ Rough approximation. Produces false negatives. """
     return 0x4E00 <= ord(char) <= 0x9FCC
 
 def cleanText(text, patternBook=CLEANER_BOOK):
@@ -572,3 +567,45 @@ def _grabHTML(url):
     html = html.decode(charset, 'ignore')
     logging.info('grab about to return')
     return html
+
+def _analysePDF(url):
+
+    """
+    url: URL to an pdf file
+    return: a tuple:
+        (title, author, main_text, [subheading1, subheading2, ...])
+    """
+
+    from pdfminer.pdfinterp import PDFResourceManager, process_pdf
+    from pdfminer.converter import TextConverter
+    from pdfminer.layout import LAParams
+    from StringIO import StringIO
+
+    def convert_pdf(pdfFile):
+
+        rsrcmgr = PDFResourceManager()
+        retstr = StringIO()
+        codec = 'utf-8'
+        laparams = LAParams()
+        device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+
+        fp = pdfFile
+        process_pdf(rsrcmgr, device, fp)
+        fp.close()
+        device.close()
+
+        str = retstr.getvalue()
+        retstr.close()
+        return str
+
+    pdfFile = StringIO()
+    pdfFile.write(_makeOpener(url).read())
+
+    text = convert_pdf(pdfFile)
+
+    # TODO: Meta info extraction
+    title = ''
+    author = ''
+    subheading = []
+
+    return (title, author, text, subheading)
