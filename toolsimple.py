@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# ==== Works by others ====
+# ==== Works by others that are included in the package ==== 
 
 # ExtMainText.py:
 #   Copyright (c) 2009, Elias Soong, all rights reserved.
@@ -47,7 +47,7 @@
 #   Images and text by Co-China Forum.
 #   Copyrighted and not distributed under GPL.
 
-__version__ = '0.06'
+__version__ = '0.10'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 __language__ = "English"
@@ -1469,8 +1469,7 @@ class MainFrame(wx.Frame):
     ## MainFrame
     def askInfo(self, prompt, dialogTitle, defaultVal='',
                 multiline=False, noCancel=False):
-        """ Open a dialog and ask the user for information.
-            Being replaced by separate frames.  """
+        """ Open a dialog and ask the user for information. """
 
         style = wx.OK
         if multiline:

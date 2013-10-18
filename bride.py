@@ -6,7 +6,7 @@
 
 # Copyright (C) 2013 Shu Xin
 
-__version__ = '0.81'
+__version__ = '0.8.2'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
@@ -27,25 +27,33 @@ MAGIC_WIDTH = 120.0 # roughly equals to left page margin
 logging.info('\r\n' + '*'*3)
 logging.info('The Bride running '+str(datetime.now()))
 
+def _getFullTitle(issue):
+    return u'第' + issue.issueNum + u'期' + ' ' + issue.grandTitle
+
 def createDocx(issue):
     pass #TODO
 
 def createDoc(issue, savePath=None, templatePath=None, quitWord=False):
     """Create a doc based on template.dot and fill in the contents of issue."""
+
+    # Set default parameters
     if savePath is None:
-        savePath = os.getcwd().decode(SYSENC) + '\\' + _getFullTitle(issue)
+        savePath = _getFullTitle(issue)
     if templatePath is None:
-        templatePath = os.getcwd().decode(SYSENC) + r'\template.dot'
+        templatePath = os.getcwd() + r'\template.dot'
+
     _createDoc(issue, savePath, templatePath, quitWord)
 
     win32clipboard.OpenClipboard()
     win32clipboard.EmptyClipboard()
     win32clipboard.CloseClipboard()
 
-    return savePath + '.doc'  #TODO: what if savePath is specified?
+    return savePath
 
 def _createDoc(issue, savePath, templatePath, quitWord):
+
     word, doc = _initialize(issue, savePath, templatePath)
+
     try:
         _setCoverPage(doc, issue)
         _addEditorRemark(doc.Content, issue)
@@ -54,14 +62,14 @@ def _createDoc(issue, savePath, templatePath, quitWord):
         _addArticles(doc, issue)
         _addPortraitAndBio(doc, issue)
         _setTOC(doc.Content)
+
     except:
         word.Visible = True
+
     finally:
         _SeparateLongTitles(doc, issue)
         _finalize(word, doc, quitWord)
 
-def _getFullTitle(issue):
-    return u'第' + issue.issueNum + u'期' + ' ' + issue.grandTitle
 
 def _initialize(issue, savePath, templatePath):
     logging.info('Doc creation module running %s' % str(datetime.now()))
@@ -77,7 +85,7 @@ def _initialize(issue, savePath, templatePath):
 
     fullTitle = _getFullTitle(issue)
     try:
-        doc.SaveAs(FileName=savePath.encode(SYSENC),
+        doc.SaveAs(FileName=savePath,
                    FileFormat=win32.constants.wdFormatDocument)
     except:
         logging.debug('File saving failed. path = %s' % savePath)
