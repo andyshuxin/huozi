@@ -9,6 +9,7 @@ obsolete
 *.txt
 *.log
 *.doc
+*.docx
 *.wbk
 ~*
 
