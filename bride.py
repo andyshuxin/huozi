@@ -38,7 +38,7 @@ def createDoc(issue, savePath=None, templatePath=None, quitWord=False):
 
     # Set default parameters
     if savePath is None:
-        savePath = _getFullTitle(issue)
+        savePath = _getFullTitle(issue).encode(SYSENC)
     if templatePath is None:
         templatePath = os.getcwd() + r'\template.dot'
 
@@ -47,6 +47,8 @@ def createDoc(issue, savePath=None, templatePath=None, quitWord=False):
     win32clipboard.OpenClipboard()
     win32clipboard.EmptyClipboard()
     win32clipboard.CloseClipboard()
+
+    savePath = savePath + '.doc'   # Adjust for extension that Word would add
 
     return savePath
 
@@ -85,11 +87,11 @@ def _initialize(issue, savePath, templatePath):
 
     fullTitle = _getFullTitle(issue)
     try:
-        doc.SaveAs(FileName=savePath,
+        doc.SaveAs(FileName=savePath.decode(SYSENC),
                    FileFormat=win32.constants.wdFormatDocument)
     except:
         logging.debug('File saving failed. path = %s' % savePath)
-        raise RuntimeError("Fail to save file.")
+        #raise RuntimeError("Fail to save file.")
     logging.info('File saved')
 
     return word, doc
