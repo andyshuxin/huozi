@@ -11,7 +11,7 @@
 
 # Copyright (C) 2013 Shu Xin
 
-__version__ = '0.94'
+__version__ = '0.9.5'
 __author__ = "Andy Shu Xin (andy@shux.in)"
 __copyright__ = "(C) 2013 Shu Xin. GNU GPL 3."
 
